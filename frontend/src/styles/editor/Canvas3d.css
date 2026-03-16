@@ -1,75 +1,81 @@
-/* ── Canvas3D Styles ─────────────────────────────────────────────────────── */
+/* Canvas3D.css */
 
-/* Wrapper fills whatever container it's placed in */
-.canvas3d-wrapper {
-  width: 100%;
-  height: 100%;
-  position: relative;
+.canvas3d-root {
+  width: 100%; height: 100%; position: relative;
+  background: #1a1a2e;
 }
 
-/* The R3F <Canvas> element itself */
-.canvas3d-wrapper canvas {
-  display: block;
-  width: 100% !important;
-  height: 100% !important;
-  background: #d4e4f7;
+/* ── Loading state ────────────────────────────────────────────────── */
+.canvas3d-loading {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 12px; background: #1a1a2e;
+  color: #9b95ff; font-family: 'Syne', sans-serif;
 }
+.canvas3d-loading__icon  { font-size: 48px; animation: float 2s infinite; }
+.canvas3d-loading__title { font-size: 18px; font-weight: 800; }
+.canvas3d-loading__sub   { font-size: 12px; color: #555; }
 
-/* ── Controls hint bar (bottom-center) ───────────────────────────────────── */
-.canvas3d-controls-hint {
-  position: absolute;
-  bottom: 14px;
-  left: 50%;
+/* ── Empty state ──────────────────────────────────────────────────── */
+.canvas3d-empty {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 10px; pointer-events: none;
+}
+.canvas3d-empty__icon  { font-size: 40px; opacity: 0.3; }
+.canvas3d-empty__title {
+  font-size: 14px; font-weight: 700;
+  color: rgba(255,255,255,0.2);
+  font-family: 'Syne', sans-serif;
+}
+.canvas3d-empty__sub { font-size: 11px; color: rgba(255,255,255,0.1); }
+
+/* ── Controls hint ────────────────────────────────────────────────── */
+.canvas3d-controls {
+  position: absolute; bottom: 14px; left: 50%;
   transform: translateX(-50%);
-  display: flex;
-  gap: 16px;
-  font-size: 11px;
-  color: rgba(0, 0, 0, 0.35);
-  pointer-events: none;
+  display: flex; gap: 16px; font-size: 11px;
+  color: rgba(0,0,0,0.35); pointer-events: none;
   white-space: nowrap;
-  user-select: none;
 }
 
-/* ── Status badges (top-right) ───────────────────────────────────────────── */
+/* ── Status badges ────────────────────────────────────────────────── */
 .canvas3d-status {
-  position: absolute;
-  top: 12px;
-  right: 14px;
-  font-size: 11px;
-  pointer-events: none;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  position: absolute; top: 12px; right: 14px;
+  font-size: 11px; pointer-events: none;
+  display: flex; flex-wrap: wrap; gap: 6px;
 }
-
 .canvas3d-status__badge {
-  padding: 4px 10px;
-  border-radius: 6px;
+  padding: 4px 10px; border-radius: 6px;
+  font-weight: 600;
 }
-
-/* live room badge */
-.canvas3d-status__badge--live {
-  background: rgba(108, 99, 255, 0.2);
+.canvas3d-status__badge--purple {
+  background: rgba(108,99,255,0.2);
   color: #7c72ff;
-  border: 1px solid rgba(108, 99, 255, 0.3);
+  border: 1px solid rgba(108,99,255,0.3);
+}
+.canvas3d-status__badge--gray {
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.3);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.canvas3d-status__badge--teal {
+  background: rgba(67,217,173,0.15);
+  color: #43d9ad;
+  border: 1px solid rgba(67,217,173,0.25);
+}
+.canvas3d-status__badge--orange {
+  background: rgba(251,146,60,0.15);
+  color: #fb923c;
+  border: 1px solid rgba(251,146,60,0.25);
 }
 
-/* demo room badge */
-.canvas3d-status__badge--demo {
-  background: rgba(0, 0, 0, 0.15);
-  color: rgba(0, 0, 0, 0.4);
-}
-
-/* floor texture badge */
-.canvas3d-status__badge--floor {
-  background: rgba(67, 217, 173, 0.15);
-  color: #2da882;
-  border: 1px solid rgba(67, 217, 173, 0.3);
-}
-
-/* wall texture badge */
-.canvas3d-status__badge--wall {
-  background: rgba(108, 99, 255, 0.15);
-  color: #7c72ff;
-  border: 1px solid rgba(108, 99, 255, 0.3);
+/* ── Door click hint ──────────────────────────────────────────────── */
+.canvas3d-door-hint {
+  position: absolute; top: 12px; left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px; color: rgba(255,255,255,0.25);
+  pointer-events: none; white-space: nowrap;
 }
