@@ -182,17 +182,54 @@ export default function AdminPage() {
   );
 
   // ── Dashboard ──────────────────────────────────────────────────
-  /*const DashboardView = () => (
+  const DashboardView = () => (
     <div>
-      <h2 style={{ fontFamily:'Syne,sans-serif', fontWeight:900, fontSize:'1.375rem', marginBottom:'0.25rem' }}>Dashboard</h2>
-      <p style={{ color:'rgba(255,255,255,0.3)', fontSize:'0.875rem', marginBottom:'2rem' }}>Welcome back, {user?.name} 👋</p>
+      <h2
+        style={{
+          fontFamily: "Syne,sans-serif",
+          fontWeight: 900,
+          fontSize: "1.375rem",
+          marginBottom: "0.25rem",
+        }}
+      >
+        Dashboard
+      </h2>
+      <p
+        style={{
+          color: "rgba(255,255,255,0.3)",
+          fontSize: "0.875rem",
+          marginBottom: "2rem",
+        }}
+      >
+        Welcome back, {user?.name} 👋
+      </p>
       <div className="admin-stats">
         {[
-          { label:'Furniture',     value:store.furniture.length,                           icon:'🪑', cls:'text-accent' },
-          { label:'Textures',      value:store.textures.length,                            icon:'🎨', cls:'text-teal'   },
-          { label:'Wall Textures', value:store.textures.filter(t=>t.type==='wall').length, icon:'🧱', cls:'text-orange' },
-          { label:'Floor Textures',value:store.textures.filter(t=>t.type==='floor').length,icon:'🪵', cls:'text-blue'   },
-        ].map(s => (
+          {
+            label: "Furniture",
+            value: store.furniture.length,
+            icon: "🪑",
+            cls: "text-accent",
+          },
+          {
+            label: "Textures",
+            value: store.textures.length,
+            icon: "🎨",
+            cls: "text-teal",
+          },
+          {
+            label: "Wall Textures",
+            value: store.textures.filter((t) => t.type === "wall").length,
+            icon: "🧱",
+            cls: "text-orange",
+          },
+          {
+            label: "Floor Textures",
+            value: store.textures.filter((t) => t.type === "floor").length,
+            icon: "🪵",
+            cls: "text-blue",
+          },
+        ].map((s) => (
           <div key={s.label} className="admin-stat-card">
             <div className="admin-stat-card__icon">{s.icon}</div>
             <div className={`admin-stat-card__value ${s.cls}`}>{s.value}</div>
@@ -201,41 +238,78 @@ export default function AdminPage() {
         ))}
       </div>
 
-      <div style={{ marginBottom:'2rem' }}>
+      <div style={{ marginBottom: "2rem" }}>
         <div className="admin-section-header">
           <span className="admin-section-title">Recent Furniture</span>
-          <button className="admin-section-link admin-section-link--purple" onClick={() => setPage('furniture')}>View all →</button>
+          <button
+            className="admin-section-link admin-section-link--purple"
+            onClick={() => setPage("furniture")}
+          >
+            View all →
+          </button>
         </div>
-        {store.furniture.length === 0
-          ? <div className="admin-empty">No furniture yet — <button className="admin-section-link admin-section-link--purple" onClick={() => setPage('furniture')}>Add some →</button></div>
-          : <div className="admin-mini-grid">{store.furniture.slice(0,8).map(item => (
+        {store.furniture.length === 0 ? (
+          <div className="admin-empty">
+            No furniture yet —{" "}
+            <button
+              className="admin-section-link admin-section-link--purple"
+              onClick={() => setPage("furniture")}
+            >
+              Add some →
+            </button>
+          </div>
+        ) : (
+          <div className="admin-mini-grid">
+            {store.furniture.slice(0, 8).map((item) => (
               <div key={item.id} className="admin-mini-card">
                 <img src={item.image} alt={item.name} />
                 <div className="admin-mini-card__label">{item.name}</div>
               </div>
-            ))}</div>
-        }
+            ))}
+          </div>
+        )}
       </div>
 
       <div>
         <div className="admin-section-header">
           <span className="admin-section-title">Recent Textures</span>
-          <button className="admin-section-link admin-section-link--teal" onClick={() => setPage('textures')}>View all →</button>
+          <button
+            className="admin-section-link admin-section-link--teal"
+            onClick={() => setPage("textures")}
+          >
+            View all →
+          </button>
         </div>
-        {store.textures.length === 0
-          ? <div className="admin-empty">No textures yet — <button className="admin-section-link admin-section-link--teal" onClick={() => setPage('textures')}>Add some →</button></div>
-          : <div className="admin-mini-grid">{store.textures.slice(0,8).map(item => (
-              <div key={item.id} className="admin-mini-card admin-mini-card--texture">
+        {store.textures.length === 0 ? (
+          <div className="admin-empty">
+            No textures yet —{" "}
+            <button
+              className="admin-section-link admin-section-link--teal"
+              onClick={() => setPage("textures")}
+            >
+              Add some →
+            </button>
+          </div>
+        ) : (
+          <div className="admin-mini-grid">
+            {store.textures.slice(0, 8).map((item) => (
+              <div
+                key={item.id}
+                className="admin-mini-card admin-mini-card--texture"
+              >
                 <img src={item.image} alt={item.name} />
                 <div className="admin-mini-card__label">{item.name}</div>
-                <div className="admin-mini-card__sublabel">{item.type==='wall'?'🧱 Wall':'🪵 Floor'}</div>
+                <div className="admin-mini-card__sublabel">
+                  {item.type === "wall" ? "🧱 Wall" : "🪵 Floor"}
+                </div>
               </div>
-            ))}</div>
-        }
+            ))}
+          </div>
+        )}
       </div>
     </div>
-  )
-*/
+  );
+
   // ── Furniture ──────────────────────────────────────────────────
   const FurnitureView = () => (
     <div>
