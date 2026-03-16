@@ -2,29 +2,38 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { logout } from '../store/slices/authSlice'
+import { BarChart3, Armchair, Palette, BrickWall, Layers, X, Settings, LogOut } from 'lucide-react'
 import '../styles/pages/AdminPage.css'
 
 const getStore = () => JSON.parse(localStorage.getItem('adminAssets') || '{"furniture":[],"textures":[]}')
 const saveStore = (data) => localStorage.setItem('adminAssets', JSON.stringify(data))
 const CATS = ['sofa','chair','table','bed','storage','lighting','kitchen','bathroom','decor']
 const NAV = [
-  { id:'dashboard', icon:'📊', label:'Dashboard' },
-  { id:'furniture', icon:'🪑', label:'Furniture' },
-  { id:'textures',  icon:'🎨', label:'Textures'  },
+  { id:'dashboard', icon:BarChart3, label:'Dashboard' },
+  { id:'furniture', icon:Armchair, label:'Furniture' },
+  { id:'textures',  icon:Palette, label:'Textures'  },
 ]
 
 // ── Helper Components ──────────────────────────────────────────
 const Flash = ({ msg }) => !msg ? null : (
-  <div className={`admin-flash ${msg.startsWith('⚠') ? 'admin-flash--error' : 'admin-flash--success'}`}>{msg}</div>
+  <div className={`admin-flash ${msg.startsWith('Error:') ? 'admin-flash--error' : 'admin-flash--success'}`}>
+    {msg.replace(/^Error:\s*/, '').replace(/^Success:\s*/, '')}
+  </div>
 )
 
 const UploadBox = ({ preview, onFile, onClear, icon, label, readFile }) => (
   <div>
     <label className={`admin-upload-box ${preview ? 'admin-upload-box--filled' : ''}`}>
-      {preview ? <img src={preview} alt="preview" /> : <><span className="admin-upload-box__icon">{icon}</span><span className="admin-upload-box__label">{label}</span></>}
+      {preview
+        ? <img src={preview} alt="preview" />
+        : <>
+            <span className="admin-upload-box__icon">{icon && (() => { const UploadIcon = icon; return <UploadIcon size={28} /> })()}</span>
+            <span className="admin-upload-box__label">{label}</span>
+          </>
+      }
       <input type="file" accept="image/*" style={{ display:'none' }} onChange={e => { const f=e.target.files?.[0]; if(f) readFile(f,onFile); e.target.value='' }} />
     </label>
-    {preview && <button className="admin-upload-clear" onClick={onClear}>✕ Remove</button>}
+    {preview && <button className="admin-upload-clear" onClick={onClear}><X size={14} /> Remove</button>}
   </div>
 )
 
@@ -40,25 +49,25 @@ const ItemCard = ({ item, section, isTexture, onDelete }) => (
     <img src={item.image} alt={item.name} className={isTexture ? 'admin-item-card--texture' : ''} />
     <div className="admin-item-card__body">
       <div className="admin-item-card__name">{item.name}</div>
-      <div className="admin-item-card__meta">{isTexture ? (item.type==='wall'?'🧱 Wall':'🪵 Floor') : `${item.category} • $${item.price}`}</div>
+      <div className="admin-item-card__meta">{isTexture ? (item.type==='wall'?<><BrickWall size={12} /> Wall</>:<><Layers size={12} /> Floor</>) : `${item.category} • $${item.price}`}</div>
     </div>
-    <button className="admin-item-card__delete" onClick={() => onDelete(section, item.id)}>✕</button>
+    <button className="admin-item-card__delete" onClick={() => onDelete(section, item.id)}><X size={14} /></button>
   </div>
 )
 
 const DashboardView = ({ store, setPage, user }) => (
   <div>
     <h2 style={{ fontFamily:'Syne,sans-serif', fontWeight:900, fontSize:'1.375rem', marginBottom:'0.25rem' }}>Dashboard</h2>
-    <p style={{ color:'rgba(255,255,255,0.3)', fontSize:'0.875rem', marginBottom:'2rem' }}>Welcome back, {user?.name} 👋</p>
+    <p style={{ color:'rgba(255,255,255,0.3)', fontSize:'0.875rem', marginBottom:'2rem' }}>Welcome back, {user?.name}</p>
     <div className="admin-stats">
       {[
-        { label:'Furniture',     value:store.furniture.length,                           icon:'🪑', cls:'text-accent' },
-        { label:'Textures',      value:store.textures.length,                            icon:'🎨', cls:'text-teal'   },
-        { label:'Wall Textures', value:store.textures.filter(t=>t.type==='wall').length, icon:'🧱', cls:'text-orange' },
-        { label:'Floor Textures',value:store.textures.filter(t=>t.type==='floor').length,icon:'🪵', cls:'text-blue'   },
+        { label:'Furniture',     value:store.furniture.length,                           icon:Armchair, cls:'text-accent' },
+        { label:'Textures',      value:store.textures.length,                            icon:Palette, cls:'text-teal'   },
+        { label:'Wall Textures', value:store.textures.filter(t=>t.type==='wall').length, icon:BrickWall, cls:'text-orange' },
+        { label:'Floor Textures',value:store.textures.filter(t=>t.type==='floor').length,icon:Layers, cls:'text-blue'   },
       ].map(s => (
         <div key={s.label} className="admin-stat-card">
-          <div className="admin-stat-card__icon">{s.icon}</div>
+          <div className="admin-stat-card__icon">{s.icon && <s.icon size={22} />}</div>
           <div className={`admin-stat-card__value ${s.cls}`}>{s.value}</div>
           <div className="admin-stat-card__label">{s.label}</div>
         </div>
@@ -92,7 +101,7 @@ const DashboardView = ({ store, setPage, user }) => (
             <div key={item.id} className="admin-mini-card admin-mini-card--texture">
               <img src={item.image} alt={item.name} />
               <div className="admin-mini-card__label">{item.name}</div>
-              <div className="admin-mini-card__sublabel">{item.type==='wall'?'🧱 Wall':'🪵 Floor'}</div>
+              <div className="admin-mini-card__sublabel">{item.type==='wall'?<><BrickWall size={12} /> Wall</>:<><Layers size={12} /> Floor</>}</div>
             </div>
           ))}</div>
       }
@@ -107,7 +116,7 @@ const FurnitureView = ({ store, form, setForm, preview, setPreview, msg, onAddFu
     <div className="admin-page-grid">
       <div className="admin-form-card">
         <h3>+ Add Furniture</h3>
-        <UploadBox preview={preview} onFile={setPreview} onClear={() => setPreview(null)} icon="🪑" label="Upload furniture image" readFile={readFile} />
+        <UploadBox preview={preview} onFile={setPreview} onClear={() => setPreview(null)} icon={Armchair} label="Upload furniture image" readFile={readFile} />
         <Field label="Name *"     field="name"  placeholder="e.g. Modern Sofa" obj={form} setObj={setForm} />
         <Field label="Price ($)"  field="price" placeholder="299" type="number" obj={form} setObj={setForm} />
         <Field label="Width (cm)" field="width" placeholder="120" type="number" obj={form} setObj={setForm} />
@@ -138,13 +147,13 @@ const TexturesView = ({ store, texForm, setTexForm, texPrev, setTexPrev, msg, on
     <div className="admin-page-grid">
       <div className="admin-form-card">
         <h3>+ Add Texture</h3>
-        <UploadBox preview={texPrev} onFile={setTexPrev} onClear={() => setTexPrev(null)} icon="🎨" label="Upload texture image" readFile={readFile} />
+        <UploadBox preview={texPrev} onFile={setTexPrev} onClear={() => setTexPrev(null)} icon={Palette} label="Upload texture image" readFile={readFile} />
         <Field label="Name *" field="name" placeholder="e.g. Marble Floor" obj={texForm} setObj={setTexForm} />
         <div className="admin-field">
           <label>Apply To</label>
           <div className="admin-type-toggle">
-            <button className={`admin-type-btn ${texForm.type==='wall' ? 'admin-type-btn--wall-active' : 'admin-type-btn--wall-inactive'}`} onClick={() => setTexForm(p=>({...p,type:'wall'}))}>🧱 Wall</button>
-            <button className={`admin-type-btn ${texForm.type==='floor' ? 'admin-type-btn--floor-active' : 'admin-type-btn--floor-inactive'}`} onClick={() => setTexForm(p=>({...p,type:'floor'}))}>🪵 Floor</button>
+            <button className={`admin-type-btn ${texForm.type==='wall' ? 'admin-type-btn--wall-active' : 'admin-type-btn--wall-inactive'}`} onClick={() => setTexForm(p=>({...p,type:'wall'}))}><BrickWall size={14} /> Wall</button>
+            <button className={`admin-type-btn ${texForm.type==='floor' ? 'admin-type-btn--floor-active' : 'admin-type-btn--floor-inactive'}`} onClick={() => setTexForm(p=>({...p,type:'floor'}))}><Layers size={14} /> Floor</button>
           </div>
         </div>
         <button className="admin-submit-teal" onClick={onAddTexture}>Add Texture</button>
@@ -176,20 +185,20 @@ export default function AdminPage() {
   const readFile = (file, cb) => { const r = new FileReader(); r.onload = (e) => cb(e.target.result); r.readAsDataURL(file) }
 
   const addFurniture = () => {
-    if (!preview || !form.name) return flash('⚠ Please add a name and image')
+    if (!preview || !form.name) return flash('Error: Please add a name and image')
     const item = { id:`f_${Date.now()}`, ...form, price:+form.price||0, width:+form.width||80, depth:+form.depth||80, image:preview, addedAt:new Date().toISOString() }
     const next = { ...store, furniture:[item,...store.furniture] }
     saveStore(next); setStore(next)
     setPreview(null); setForm({ name:'', category:'sofa', price:'', width:'', depth:'' })
-    flash('✓ Furniture added!')
+    flash('Success: Furniture added!')
   }
   const addTexture = () => {
-    if (!texPrev || !texForm.name) return flash('⚠ Please add a name and image')
+    if (!texPrev || !texForm.name) return flash('Error: Please add a name and image')
     const item = { id:`t_${Date.now()}`, ...texForm, image:texPrev, addedAt:new Date().toISOString() }
     const next = { ...store, textures:[item,...store.textures] }
     saveStore(next); setStore(next)
     setTexPrev(null); setTexForm({ name:'', type:'wall' })
-    flash('✓ Texture added!')
+    flash('Success: Texture added!')
   }
   const del = (section, id) => { const next = { ...store, [section]:store[section].filter(i=>i.id!==id) }; saveStore(next); setStore(next) }
   const handleLogout = () => { dispatch(logout()); navigate('/admin/login') }
@@ -201,7 +210,7 @@ export default function AdminPage() {
       {/* Sidebar */}
       <aside className="admin-sidebar">
         <div className="admin-sidebar__logo">
-          <div className="admin-sidebar__logo-icon">⚙️</div>
+          <div className="admin-sidebar__logo-icon"><Settings size={18} /></div>
           <div className="admin-sidebar__logo-text">
             <div className="admin-sidebar__logo-name">HomePlan3D</div>
             <div className="admin-sidebar__logo-badge">Admin Panel</div>
@@ -213,10 +222,11 @@ export default function AdminPage() {
           {NAV.map(item => {
             const active = page === item.id
             const count = item.id==='furniture' ? store.furniture.length : item.id==='textures' ? store.textures.length : null
+            const NavIcon = item.icon
             return (
               <button key={item.id} onClick={() => setPage(item.id)}
                 className={`admin-nav-btn ${active ? 'admin-nav-btn--active' : 'admin-nav-btn--inactive'}`}>
-                <span className="admin-nav-btn__icon">{item.icon}</span>
+                <span className="admin-nav-btn__icon">{NavIcon && <NavIcon size={16} />}</span>
                 <span className="admin-nav-btn__label">{item.label}</span>
                 {count > 0 && (
                   <span className={`admin-nav-btn__badge ${item.id==='textures' ? 'admin-nav-btn__badge--teal' : 'admin-nav-btn__badge--purple'}`}>{count}</span>
@@ -234,14 +244,14 @@ export default function AdminPage() {
               <div className="admin-sidebar__user-role">Administrator</div>
             </div>
           </div>
-          <button className="admin-logout-btn" onClick={handleLogout}>🚪 Sign Out</button>
+          <button className="admin-logout-btn" onClick={handleLogout}><LogOut size={14} /> Sign Out</button>
         </div>
       </aside>
 
       {/* Main */}
       <div className="admin-main">
         <header className="admin-topbar">
-          <div className="admin-topbar__title">{currentNav?.icon} {currentNav?.label}</div>
+          <div className="admin-topbar__title">{currentNav?.icon && <currentNav.icon size={16} />} {currentNav?.label}</div>
           <div className="admin-topbar__sub">
             {page==='dashboard' && 'Overview of your catalog'}
             {page==='furniture' && 'Manage furniture items for clients'}

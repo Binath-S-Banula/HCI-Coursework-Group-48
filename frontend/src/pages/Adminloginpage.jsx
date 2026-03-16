@@ -5,6 +5,7 @@ import { z } from "zod";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { login, logout } from "../store/slices/authSlice";
+import { Settings, ShieldAlert, Lock, ArrowRight } from "lucide-react";
 import "../styles/pages/AdminLoginPage.css";
 
 const schema = z.object({
@@ -44,21 +45,21 @@ export default function AdminLoginPage() {
     <div className="admin-login-page">
       <div className="admin-login-box">
         <div className="admin-login-logo-wrap">
-          <div className="admin-login-logo">⚙️</div>
+          <div className="admin-login-logo"><Settings size={28} /></div>
           <h1>Admin Portal</h1>
           <p>HomePlan3D — Restricted Access</p>
         </div>
         <div className="admin-login-card">
           {notAdmin && (
             <div className="admin-login-error">
-              ⛔ This account does not have admin access.
+              <ShieldAlert size={14} /> This account does not have admin access.
             </div>
           )}
           {error && !notAdmin && (
             <div className="admin-login-error">{error}</div>
           )}
           <div className="admin-login-warning">
-            🔒 Admin accounts only. Clients use the{" "}
+            <Lock size={14} /> Admin accounts only. Clients use the{" "}
             <span onClick={() => navigate("/login")}>regular login</span>.
           </div>
           <form className="admin-login-form" onSubmit={handleSubmit(onSubmit)}>
@@ -95,13 +96,13 @@ export default function AdminLoginPage() {
               className="admin-login-submit"
               disabled={loading}
             >
-              {loading ? "Signing in..." : "⚙️ Sign In as Admin"}
+              {loading ? "Signing in..." : <><Settings size={14} /> Sign In as Admin</>}
             </button>
           </form>
         </div>
         <p className="admin-login-footer">
           Not an admin?{" "}
-          <span onClick={() => navigate("/login")}>Go to client login →</span>
+          <span onClick={() => navigate("/login")}>Go to client login <ArrowRight size={14} /></span>
         </p>
       </div>
     </div>
