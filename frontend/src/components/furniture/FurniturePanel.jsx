@@ -9,9 +9,7 @@ const CATS = [
   { id: 'bed',      label: 'Bed'     },
   { id: 'storage',  label: 'Storage' },
   { id: 'lighting', label: 'Lights'  },
-  { id: 'kitchen',  label: 'Kitchen' },
   { id: 'bathroom', label: 'Bath'    },
-  { id: 'decor',    label: 'Decor'   },
 ]
 
 const ICONS = {
@@ -21,31 +19,13 @@ const ICONS = {
   bed: <svg width="56" height="56" viewBox="0 0 72 48" fill="none"><rect x="4" y="20" width="64" height="22" rx="4" fill="#6c63ff" opacity="0.6"/><rect x="4" y="8" width="18" height="34" rx="3" fill="#9b95ff" opacity="0.7"/><rect x="26" y="22" width="20" height="14" rx="3" fill="#e8e8f0" opacity="0.15"/><rect x="4" y="38" width="8" height="6" rx="1" fill="#555"/><rect x="60" y="38" width="8" height="6" rx="1" fill="#555"/></svg>,
   storage: <svg width="56" height="56" viewBox="0 0 48 56" fill="none"><rect x="6" y="4" width="36" height="48" rx="3" fill="#9b95ff" opacity="0.5"/><rect x="6" y="4" width="36" height="12" rx="3" fill="#6c63ff" opacity="0.7"/><rect x="6" y="20" width="36" height="12" fill="#6c63ff" opacity="0.5"/><rect x="6" y="36" width="36" height="16" fill="#6c63ff" opacity="0.4"/><circle cx="24" cy="10" r="2" fill="#e8e8f0" opacity="0.6"/><circle cx="24" cy="26" r="2" fill="#e8e8f0" opacity="0.6"/><circle cx="24" cy="44" r="2" fill="#e8e8f0" opacity="0.6"/></svg>,
   lighting: <svg width="56" height="56" viewBox="0 0 40 56" fill="none"><ellipse cx="20" cy="16" rx="14" ry="10" fill="#f59e0b" opacity="0.7"/><rect x="18" y="26" width="4" height="24" rx="2" fill="#888"/><ellipse cx="20" cy="52" rx="8" ry="3" fill="#555"/></svg>,
-  kitchen: <svg width="56" height="56" viewBox="0 0 64 48" fill="none"><rect x="4" y="20" width="56" height="24" rx="3" fill="#43d9ad" opacity="0.5"/><rect x="4" y="8" width="56" height="14" rx="3" fill="#43d9ad" opacity="0.7"/><circle cx="20" cy="15" r="5" fill="#e8e8f0" opacity="0.2"/><circle cx="44" cy="15" r="5" fill="#e8e8f0" opacity="0.2"/><rect x="10" y="24" width="20" height="16" rx="2" fill="rgba(255,255,255,0.06)"/><rect x="34" y="24" width="22" height="16" rx="2" fill="rgba(255,255,255,0.06)"/></svg>,
   bathroom: <svg width="56" height="56" viewBox="0 0 72 40" fill="none"><rect x="4" y="16" width="64" height="20" rx="10" fill="#6c63ff" opacity="0.4"/><rect x="4" y="20" width="64" height="16" rx="4" fill="#6c63ff" opacity="0.6"/><rect x="4" y="8" width="10" height="12" rx="3" fill="#9b95ff" opacity="0.6"/></svg>,
   decor: <svg width="56" height="56" viewBox="0 0 40 56" fill="none"><ellipse cx="20" cy="20" rx="14" ry="18" fill="#43d9ad" opacity="0.5"/><ellipse cx="20" cy="16" rx="10" ry="12" fill="#43d9ad" opacity="0.4"/><rect x="16" y="36" width="8" height="16" rx="2" fill="#888"/><ellipse cx="20" cy="52" rx="6" ry="3" fill="#555"/></svg>,
   default: <svg width="56" height="56" viewBox="0 0 48 48" fill="none"><rect x="8" y="8" width="32" height="32" rx="4" fill="#6c63ff" opacity="0.5"/></svg>,
 }
 
 const ITEMS = [
-  { id:'f1',  name:'Modular Sofa',   cat:'sofa',     w:240, d:90  },
-  { id:'f2',  name:'Eames Chair',    cat:'chair',    w:80,  d:85  },
-  { id:'f3',  name:'Coffee Table',   cat:'table',    w:120, d:60  },
-  { id:'f4',  name:'King Bed',       cat:'bed',      w:180, d:200 },
-  { id:'f5',  name:'Floor Lamp',     cat:'lighting', w:40,  d:40  },
-  { id:'f6',  name:'Bookshelf',      cat:'storage',  w:80,  d:30  },
-  { id:'f7',  name:'Dining Chair',   cat:'chair',    w:50,  d:55  },
-  { id:'f8',  name:'Side Table',     cat:'table',    w:45,  d:45  },
-  { id:'f9',  name:'Pendant Light',  cat:'lighting', w:30,  d:30  },
-  { id:'f10', name:'Cabinet',        cat:'storage',  w:100, d:40  },
-  { id:'f11', name:'Sectional Sofa', cat:'sofa',     w:300, d:150 },
-  { id:'f12', name:'Kitchen Island', cat:'kitchen',  w:120, d:60  },
-  { id:'f13', name:'Bathtub',        cat:'bathroom', w:170, d:75  },
-  { id:'f14', name:'Plant',          cat:'decor',    w:40,  d:40  },
-  { id:'f15', name:'Armchair',       cat:'chair',    w:80,  d:80  },
-  { id:'f16', name:'Wardrobe',       cat:'storage',  w:150, d:55  },
-  { id:'f17', name:'Desk',           cat:'table',    w:140, d:70  },
-  { id:'f18', name:'TV Stand',       cat:'storage',  w:180, d:45  },
+ 
 ]
 
 function getAdminFurniture() {
