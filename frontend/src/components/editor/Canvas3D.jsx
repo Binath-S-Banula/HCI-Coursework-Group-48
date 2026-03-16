@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useState, useMemo, useRef } from 'react'
 import { Canvas, useLoader, useThree, useFrame } from '@react-three/fiber'
-import { OrbitControls, Environment, Grid, Box, Plane, Sky, ContactShadows, useTexture } from '@react-three/drei'
+import { OrbitControls, Environment, Grid, Box, Plane, Sky, ContactShadows, useTexture, useGLTF, Clone } from '@react-three/drei'
 import * as THREE from 'three'
 import '../../styles/editor/Canvas3D.css'
 
@@ -553,15 +553,61 @@ function GenericFurniture3D({ w, d, color }) {
   )
 }
 
+// ── Custom 3D model loader — loads GLB from a blob URL ───────────────────────
+// We store the base64 → convert to blob URL on render
+const blobCache = {}
+function base64ToBlobUrl(base64) {
+  if (!base64) return null
+  if (blobCache[base64]) return blobCache[base64]
+  try {
+    const arr  = base64.split(',')
+    const mime = arr[0].match(/:(.*?);/)?.[1] || 'model/gltf-binary'
+    const bstr = atob(arr[1])
+    let n = bstr.length
+    const u8 = new Uint8Array(n)
+    while (n--) u8[n] = bstr.charCodeAt(n)
+    const blob = new Blob([u8], { type: mime })
+    const url  = URL.createObjectURL(blob)
+    blobCache[base64] = url
+    return url
+  } catch(e) {
+    console.error('base64ToBlobUrl failed:', e)
+    return null
+  }
+}
+
+function CustomModel({ url, w, d }) {
+  const { scene } = useGLTF(url)
+  // Auto-scale model to fit the furniture footprint (w × d)
+  const box = new THREE.Box3().setFromObject(scene)
+  const size = new THREE.Vector3()
+  box.getSize(size)
+  const scaleX = w / (size.x || 1)
+  const scaleZ = d / (size.z || 1)
+  const scale  = Math.min(scaleX, scaleZ)   // uniform scale to fit
+  const offsetY = -box.min.y * scale         // sit on floor
+  return (
+    <Clone
+      object={scene}
+      scale={[scale, scale, scale]}
+      position={[0, offsetY, 0]}
+      castShadow
+      receiveShadow
+    />
+  )
+}
+
 function FurnitureItem3D({ item, cx, cz }) {
   const x   = (item.x - cx) * SCALE + (item.w * SCALE) / 2
   const z   = (item.y - cz) * SCALE + (item.h * SCALE) / 2
   const w   = Math.max((item.w || 80) * SCALE, 0.3)
   const d   = Math.max((item.h || 80) * SCALE, 0.3)
-  // Support both 'cat' (from FurniturePanel) and 'category' (from admin items)
   const cat = (item.cat || item.category || item.name || '').toLowerCase()
 
-  const model = (() => {
+  // If admin uploaded a custom 3D model (base64 GLB) — use it
+  const blobUrl = item.model3d ? base64ToBlobUrl(item.model3d) : null
+
+  const fallback = (() => {
     if (cat.includes('bed'))                                                          return <Bed3D w={w} d={d} />
     if (cat.includes('sofa') || cat.includes('couch'))                               return <Sofa3D w={w} d={d} />
     if (cat.includes('chair') || cat.includes('armchair') || cat.includes('stool'))  return <Chair3D w={w} d={d} />
@@ -573,6 +619,12 @@ function FurnitureItem3D({ item, cx, cz }) {
     if (cat.includes('decor'))     return <GenericFurniture3D w={w} d={d} color="#d4c8a0" />
     return <GenericFurniture3D w={w} d={d} />
   })()
+
+  const model = blobUrl ? (
+    <Suspense fallback={fallback}>
+      <CustomModel url={blobUrl} w={w} d={d} />
+    </Suspense>
+  ) : fallback
 
   return <group position={[x, 0, z]} rotation={[0, -(item.angle || 0), 0]}>{model}</group>
 }
