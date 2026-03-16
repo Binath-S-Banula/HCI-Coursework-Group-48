@@ -208,15 +208,19 @@ export default function EditorPage() {
 
         <div className="editor-canvas-area">
 
-          {/* 2D — always mounted, hidden in 3D mode */}
-          <div style={{ position:'absolute', inset:0, display: mode==='2d' ? 'flex' : 'none', flexDirection:'column' }}>
-            <Canvas2D onPropertiesOpen={() => setPropsOpen(true)} />
-          </div>
+          {/* 2D — only render after project is loaded */}
+          {project && (
+            <div style={{ position:'absolute', inset:0, display: mode==='2d' ? 'flex' : 'none', flexDirection:'column' }}>
+              <Canvas2D onPropertiesOpen={() => setPropsOpen(true)} />
+            </div>
+          )}
 
-          {/* 3D — always mounted, hidden in 2D mode */}
-          <div style={{ position:'absolute', inset:0, display: mode==='3d' ? 'block' : 'none' }}>
-            <Canvas3D />
-          </div>
+          {/* 3D — only render after project is loaded */}
+          {project && (
+            <div style={{ position:'absolute', inset:0, display: mode==='3d' ? 'block' : 'none' }}>
+              <Canvas3D />
+            </div>
+          )}
 
           {/* Zoom controls — 2D only */}
           {mode === '2d' && (
