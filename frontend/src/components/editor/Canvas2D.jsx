@@ -696,7 +696,15 @@ export default function Canvas2D({ onDesignChange }) {
     const r = canvasRef.current.getBoundingClientRect()
     const x = snap((e.clientX - r.left - panRef.current.x) / zoomRef.current - 40)
     const y = snap((e.clientY - r.top  - panRef.current.y) / zoomRef.current - 40)
-    const newItem = { id: `pf_${Date.now()}`, ...item, x, y, w: item.width || 80, h: item.depth || 80, angle: 0 }
+    const newItem = {
+      id: `pf_${Date.now()}`,
+      ...item,
+      x, y,
+      w: item.w || item.width || 80,
+      h: item.d || item.depth || 80,
+      angle: 0,
+      model3d: item.model3d || null,
+    }
     setPlaced(prev => [...prev, newItem])
     setSelectedItem(newItem.id)
     const img = new Image(); img.src = item.image
