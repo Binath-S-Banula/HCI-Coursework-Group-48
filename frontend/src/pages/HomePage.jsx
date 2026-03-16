@@ -1,14 +1,15 @@
 import { useNavigate } from 'react-router-dom'
 import { useSelector } from 'react-redux'
+import { PencilRuler, Box, Armchair, Camera, Users, Share2 } from 'lucide-react'
 import '../styles/pages/HomePage.css'
 
 const features = [
-  { icon:'🏗️', title:'2D Floor Plan Editor',   desc:'Draw walls, add doors & windows with pixel-perfect snap-to-grid precision.' },
-  { icon:'🌐', title:'Real-Time 3D Preview',    desc:'Instantly see your floor plan in stunning 3D — no loading required.' },
-  { icon:'🪑', title:'10,000+ Furniture Items', desc:'Browse top brands, filter by style, size, color and drag onto your plan.' },
-  { icon:'📸', title:'HD Rendering',            desc:'Generate photorealistic renders to share with clients or family.' },
-  { icon:'👥', title:'Collaboration',           desc:'Invite others to co-design in real-time with live cursors and comments.' },
-  { icon:'📦', title:'Export & Share',          desc:'PDF floor plans, shopping lists, and a public share link.' },
+  { Icon:PencilRuler, title:'2D Floor Plan Editor',   desc:'Draw walls, add doors & windows with pixel-perfect snap-to-grid precision.' },
+  { Icon:Box,         title:'Real-Time 3D Preview',    desc:'Instantly see your floor plan in stunning 3D — no loading required.' },
+  { Icon:Armchair,    title:'10,000+ Furniture Items', desc:'Browse top brands, filter by style, size, color and drag onto your plan.' },
+  { Icon:Camera,      title:'HD Rendering',            desc:'Generate photorealistic renders to share with clients or family.' },
+  { Icon:Users,       title:'Collaboration',           desc:'Invite others to co-design in real-time with live cursors and comments.' },
+  { Icon:Share2,      title:'Export & Share',          desc:'PDF floor plans, shopping lists, and a public share link.' },
 ]
 
 const stats = [
@@ -103,7 +104,7 @@ export default function HomePage() {
             {features.map(f => (
               <div key={f.title} className="hp-feature-card">
                 <div className="hp-feature-card__corner" />
-                <div className="hp-feature-card__icon">{f.icon}</div>
+                <div className="hp-feature-card__icon">{f.Icon && <f.Icon size={34} strokeWidth={2.1} />}</div>
                 <h3 className="hp-feature-card__title">{f.title}</h3>
                 <p className="hp-feature-card__desc">{f.desc}</p>
               </div>
