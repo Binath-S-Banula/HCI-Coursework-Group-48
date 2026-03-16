@@ -128,16 +128,18 @@ export default function Canvas2D({ onDesignChange }) {
   // ── Restore from saved project when EditorPage signals load ──────────
   useEffect(() => {
     if (!window.__editorRestoreSignal) return
-    const w = window.__editorWalls    || []
-    const p = window.__editorPlaced   || []
-    const o = window.__editorOpenings || []
-    const f = window.__editorFloorTex || null
-    const t = window.__editorWallTex  || null
+    const w  = window.__editorWalls     || []
+    const p  = window.__editorPlaced    || []
+    const o  = window.__editorOpenings  || []
+    const f  = window.__editorFloorTex  || null
+    const t  = window.__editorWallTex   || null
+    const wc = window.__editorWallColor || '#e8e2d8'
     setWalls(w)
     setPlaced(p)
     setOpenings(o)
     setFloorTex(f)
     setWallTex(t)
+    setWallColor(wc)
     setHistory([w])
     setHistIdx(0)
     delete window.__editorRestoreSignal
