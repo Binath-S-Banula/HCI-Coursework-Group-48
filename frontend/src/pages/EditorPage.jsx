@@ -58,11 +58,12 @@ export default function EditorPage() {
     setProjectName(proj.name)
 
     // Restore canvas state into globals so Canvas2D/3D can read them
-    if (proj.walls)    window.__editorWalls    = proj.walls
-    if (proj.placed)   window.__editorPlaced   = proj.placed
-    if (proj.openings) window.__editorOpenings = proj.openings
-    if (proj.floorTex) window.__editorFloorTex = proj.floorTex
-    if (proj.wallTex)  window.__editorWallTex  = proj.wallTex
+    if (proj.walls)     window.__editorWalls     = proj.walls
+    if (proj.placed)    window.__editorPlaced    = proj.placed
+    if (proj.openings)  window.__editorOpenings  = proj.openings
+    if (proj.floorTex)  window.__editorFloorTex  = proj.floorTex
+    if (proj.wallTex)   window.__editorWallTex   = proj.wallTex
+    window.__editorWallColor = proj.wallColor || '#e8e2d8'
 
     // Signal canvases to reload from globals
     window.__editorRestoreSignal = Date.now()
@@ -85,11 +86,12 @@ export default function EditorPage() {
 
   // ── Collect current canvas state from globals ─────────────────────
   const collectState = () => ({
-    walls:          window.__editorWalls    || [],
-    placed:         window.__editorPlaced   || [],
-    openings:       window.__editorOpenings || [],
-    floorTex:       window.__editorFloorTex || null,
-    wallTex:        window.__editorWallTex  || null,
+    walls:          window.__editorWalls     || [],
+    placed:         window.__editorPlaced    || [],
+    openings:       window.__editorOpenings  || [],
+    floorTex:       window.__editorFloorTex  || null,
+    wallTex:        window.__editorWallTex   || null,
+    wallColor:      window.__editorWallColor || '#e8e2d8',
     wallCount:      (window.__editorWalls    || []).length,
     furnitureCount: (window.__editorPlaced   || []).length,
     thumbnail:      captureThumb(),
