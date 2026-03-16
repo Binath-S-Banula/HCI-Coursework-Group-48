@@ -59,8 +59,6 @@ export default function Canvas2D({ onDesignChange }) {
 
   const [assets,       setAssets]       = useState(getAdminAssets)
   const [walls,        setWalls]        = useState(() => window.__editorWalls    || [])
-  const [history,      setHistory]      = useState(() => [window.__editorWalls   || []])
-  const [histIdx,      setHistIdx]      = useState(0)
   const [drawStart,    setDrawStart]    = useState(null)
   const [mousePos,     setMousePos]     = useState({ x: 0, y: 0 })
   const [placed,       setPlaced]       = useState(() => window.__editorPlaced   || [])
@@ -78,6 +76,8 @@ export default function Canvas2D({ onDesignChange }) {
 
   // Interaction state refs (avoid stale closures in event listeners)
   const dragState  = useRef(null)  // { type: 'move'|'resize-tl'|…|'rotate', startMx, startMy, origItem }
+  const wallsRef    = useRef(walls)
+  useEffect(() => { wallsRef.current = walls }, [walls])
   const placedRef   = useRef(placed)
   useEffect(() => { placedRef.current = placed }, [placed])
   const openingsRef = useRef(openings)
@@ -134,34 +134,67 @@ export default function Canvas2D({ onDesignChange }) {
     const f  = window.__editorFloorTex  || null
     const t  = window.__editorWallTex   || null
     const wc = window.__editorWallColor || '#e8e2d8'
-    setWalls(w)
-    setPlaced(p)
-    setOpenings(o)
-    setFloorTex(f)
-    setWallTex(t)
-    setWallColor(wc)
-    setHistory([w])
-    setHistIdx(0)
+    setWalls(w);  setPlaced(p);  setOpenings(o)
+    setFloorTex(f);  setWallTex(t);  setWallColor(wc)
+    undoStack.current = []
+    redoStack.current = []
     delete window.__editorRestoreSignal
   }, [])
 
-  // ── History ──────────────────────────────────────────────────────────
-  const pushHistory = useCallback((newWalls) => {
-    setHistory(prev => [...prev.slice(0, histIdx + 1), newWalls])
-    setHistIdx(i => i + 1)
-    setWalls(newWalls)
-    window.__editorWalls = newWalls
-  }, [histIdx])
+  // ── Undo / Redo — full stack, resets on save ─────────────────────────
+  const undoStack = useRef([])
+  const redoStack = useRef([])
+
+  const getSnap = () => ({
+    walls:    wallsRef.current.map(w => ({...w})),
+    placed:   placedRef.current.map(p => ({...p})),
+    openings: openingsRef.current.map(o => ({...o})),
+  })
+
+  const applySnap = (s) => {
+    wallsRef.current    = s.walls
+    placedRef.current   = s.placed
+    openingsRef.current = s.openings
+    setWalls(s.walls)
+    setPlaced(s.placed)
+    setOpenings(s.openings)
+    window.__editorWalls    = s.walls
+    window.__editorPlaced   = s.placed
+    window.__editorOpenings = s.openings
+  }
+
+  // pushHistory: save current state to undo stack then apply new state
+  const pushHistory = useCallback((newWalls, newPlaced, newOpenings) => {
+    const w = newWalls    !== undefined ? newWalls    : wallsRef.current
+    const p = newPlaced   !== undefined ? newPlaced   : placedRef.current
+    const o = newOpenings !== undefined ? newOpenings : openingsRef.current
+    undoStack.current.push(getSnap())
+    redoStack.current = []
+    wallsRef.current    = w
+    placedRef.current   = p
+    openingsRef.current = o
+    setWalls(w);  setPlaced(p);  setOpenings(o)
+    window.__editorWalls    = w
+    window.__editorPlaced   = p
+    window.__editorOpenings = o
+  }, [])
 
   const undo = useCallback(() => {
-    if (histIdx <= 0) return
-    const i = histIdx - 1; setHistIdx(i); setWalls(history[i])
-  }, [history, histIdx])
+    if (undoStack.current.length === 0) return
+    redoStack.current.push(getSnap())
+    applySnap(undoStack.current.pop())
+  }, [])
 
   const redo = useCallback(() => {
-    if (histIdx >= history.length - 1) return
-    const i = histIdx + 1; setHistIdx(i); setWalls(history[i])
-  }, [history, histIdx])
+    if (redoStack.current.length === 0) return
+    undoStack.current.push(getSnap())
+    applySnap(redoStack.current.pop())
+  }, [])
+
+  window.__editorClearHistory = () => {
+    undoStack.current = []
+    redoStack.current = []
+  }
 
   useEffect(() => {
     window.__editorUndo = undo
@@ -174,9 +207,21 @@ export default function Canvas2D({ onDesignChange }) {
       if (e.ctrlKey && e.key === 'y') { e.preventDefault(); redo() }
       if (e.key === 'Escape') { setDrawStart(null); setSelectedWall(null); setSelectedItem(null) }
       if (e.key === 'Delete') {
-        if (selectedWall !== null) { pushHistory(walls.filter(w => w.id !== selectedWall)); setSelectedWall(null) }
-        if (selectedItem !== null) { setPlaced(prev => prev.filter(p => p.id !== selectedItem)); setSelectedItem(null) }
-        if (selectedOpening !== null) { setOpenings(prev => prev.filter(o => o.id !== selectedOpening)); setSelectedOpening(null) }
+        if (selectedWall !== null) {
+          const newWalls = wallsRef.current.filter(w => w.id !== selectedWall)
+          pushHistory(newWalls, placedRef.current, openingsRef.current)
+          setSelectedWall(null)
+        }
+        if (selectedItem !== null) {
+          const newPlaced = placedRef.current.filter(p => p.id !== selectedItem)
+          pushHistory(wallsRef.current, newPlaced, openingsRef.current)
+          setSelectedItem(null)
+        }
+        if (selectedOpening !== null) {
+          const newOpenings = openingsRef.current.filter(o => o.id !== selectedOpening)
+          pushHistory(wallsRef.current, placedRef.current, newOpenings)
+          setSelectedOpening(null)
+        }
       }
     }
     window.addEventListener('keydown', onKey)
@@ -531,7 +576,11 @@ export default function Canvas2D({ onDesignChange }) {
     if (activeTool === 'wall') {
       const pos = getPos(e)
       if (!drawStart) { setDrawStart(pos) }
-      else { pushHistory([...walls, { id: Date.now(), start: drawStart, end: pos }]); setDrawStart(pos) }
+      else {
+        const newWalls = [...wallsRef.current, { id: Date.now(), start: drawStart, end: pos }]
+        pushHistory(newWalls, placedRef.current, openingsRef.current)
+        setDrawStart(pos)
+      }
     }
 
     if (activeTool === 'door' || activeTool === 'window') {
@@ -553,7 +602,8 @@ export default function Canvas2D({ onDesignChange }) {
           type: activeTool,
           width: activeTool === 'door' ? 80 : 60,
         }
-        setOpenings(prev => [...prev, newOpening])
+        const newOpenings = [...openingsRef.current, newOpening]
+        pushHistory(wallsRef.current, placedRef.current, newOpenings)
         setSelectedOpening(newOpening.id)
         setSelectedItem(null); setSelectedWall(null)
       }
@@ -628,6 +678,18 @@ export default function Canvas2D({ onDesignChange }) {
   // ── Mouse up — end drag ───────────────────────────────────────────────
   const handleMouseUp = useCallback((e) => {
     if (e.button === 1) { isPanning.current = false; return }
+    if (dragState.current) {
+      // Push to undo stack: restore original item state before drag
+      const orig = dragState.current.origItem
+      if (orig) {
+        redoStack.current = []
+        undoStack.current.push({
+          walls:    wallsRef.current.map(w => ({...w})),
+          placed:   placedRef.current.map(p => p.id === orig.id ? {...orig} : {...p}),
+          openings: openingsRef.current.map(o => ({...o})),
+        })
+      }
+    }
     dragState.current = null
     if (canvasRef.current) canvasRef.current.style.cursor = ''
   }, [])
@@ -644,7 +706,8 @@ export default function Canvas2D({ onDesignChange }) {
 
   const deleteSelected = () => {
     if (selectedItem) {
-      setPlaced(prev => prev.filter(p => p.id !== selectedItem))
+      const newPlaced = placedRef.current.filter(p => p.id !== selectedItem)
+      pushHistory(wallsRef.current, newPlaced, openingsRef.current)
       setSelectedItem(null)
     }
   }
@@ -699,15 +762,25 @@ export default function Canvas2D({ onDesignChange }) {
     const x = snap((e.clientX - r.left - panRef.current.x) / zoomRef.current - 40)
     const y = snap((e.clientY - r.top  - panRef.current.y) / zoomRef.current - 40)
     const newItem = {
-      id: `pf_${Date.now()}`,
       ...item,
+      id: `pf_${Date.now()}_${Math.random().toString(36).slice(2,7)}`, // AFTER spread to override item.id
       x, y,
       w: item.w || item.width || 80,
       h: item.d || item.depth || 80,
       angle: 0,
       model3d: item.model3d || null,
     }
-    setPlaced(prev => [...prev, newItem])
+    // Save snapshot BEFORE adding
+    undoStack.current.push({
+      walls:    wallsRef.current.map(w => ({...w})),
+      placed:   placedRef.current.map(p => ({...p})),
+      openings: openingsRef.current.map(o => ({...o})),
+    })
+    redoStack.current = []
+    const next = [...placedRef.current, newItem]
+    placedRef.current = next
+    setPlaced(next)
+    window.__editorPlaced = next
     setSelectedItem(newItem.id)
     const img = new Image(); img.src = item.image
     img.onload = () => setLoadedImages(prev => ({ ...prev, [newItem.id]: img }))
