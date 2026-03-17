@@ -2,6 +2,8 @@ const router = require('express').Router()
 const ctrl   = require('../controllers/project.controller')
 const { protect } = require('../middleware/auth.middleware')
 
+router.get('/public', ctrl.getPublic)
+
 router.use(protect)   // all project routes require login
 
 router.get   ('/',              ctrl.getAll)
