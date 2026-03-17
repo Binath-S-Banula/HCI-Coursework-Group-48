@@ -42,7 +42,9 @@ export default function EditorPage() {
         if (proj.walls)     window.__editorWalls     = proj.walls
         if (proj.placed)    window.__editorPlaced    = proj.placed
         if (proj.openings)  window.__editorOpenings  = proj.openings
+        if (proj.floor)     window.__editorFloor     = proj.floor
         if (proj.floorTex)  window.__editorFloorTex  = proj.floorTex
+        window.__editorFloorColor = proj.floorColor || '#f5f2ee'
         if (proj.wallTex)   window.__editorWallTex   = proj.wallTex
         window.__editorWallColor = proj.wallColor || '#e8e2d8'
 
@@ -77,7 +79,9 @@ export default function EditorPage() {
     walls:          window.__editorWalls     || [],
     placed:         window.__editorPlaced    || [],
     openings:       window.__editorOpenings  || [],
+    floor:          window.__editorFloor     || null,
     floorTex:       window.__editorFloorTex  || null,
+    floorColor:     window.__editorFloorColor || '#f5f2ee',
     wallTex:        window.__editorWallTex   || null,
     wallColor:      window.__editorWallColor || '#e8e2d8',
     wallCount:      (window.__editorWalls    || []).length,
