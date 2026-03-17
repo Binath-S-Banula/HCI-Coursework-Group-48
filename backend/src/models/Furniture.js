@@ -8,6 +8,8 @@ const furnitureSchema = new mongoose.Schema({
   depth:       { type: Number, default: 80  },   // cm
   height:      { type: Number, default: 80  },   // cm
   imageUrl:    { type: String, required: true },  // URL or base64
+  model3d:     { type: String, default: null },
+  model3dName: { type: String, default: null },
   thumbnailUrl:{ type: String, default: null },
   tags:        [{ type: String }],
   isFeatured:  { type: Boolean, default: false },
