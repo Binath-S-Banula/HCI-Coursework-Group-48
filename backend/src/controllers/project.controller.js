@@ -59,8 +59,10 @@ const update = async (req, res, next) => {
       description,
       walls,
       placed,
+      openings,
       floorTex,
       wallTex,
+      wallColor,
       settings,
       thumbnail,
       isPublic,
@@ -70,8 +72,10 @@ const update = async (req, res, next) => {
     if (description !== undefined) project.description = description;
     if (walls !== undefined) project.walls = walls;
     if (placed !== undefined) project.placed = placed;
+    if (openings !== undefined) project.openings = openings;
     if (floorTex !== undefined) project.floorTex = floorTex;
     if (wallTex !== undefined) project.wallTex = wallTex;
+    if (wallColor !== undefined) project.wallColor = wallColor;
     if (settings !== undefined)
       project.settings = { ...project.settings, ...settings };
     if (thumbnail !== undefined) project.thumbnail = thumbnail;
