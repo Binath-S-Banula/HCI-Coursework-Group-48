@@ -39,7 +39,7 @@ export default function AdminPage() {
   const [form,    setForm]    = useState({ name:'', category:'sofa', price:'', width:'', depth:'' })
   const [preview, setPreview] = useState(null)
   const [imageFile, setImageFile] = useState(null)
-  const [model3d, setModel3d] = useState(null)   // base64 GLB/GLTF
+  const [model3dFile, setModel3dFile] = useState(null)
   const [model3dName, setModel3dName] = useState('')
   const [msg,     setMsg]     = useState(null)
 
@@ -71,7 +71,7 @@ export default function AdminPage() {
 
   const addFurniture = async () => {
     if (!imageFile)  return flash('Please upload a 2D furniture image', 'error')
-    if (!model3d)    return flash('Please upload a 3D model (.glb or .gltf)', 'error')
+    if (!model3dFile) return flash('Please upload a 3D model (.glb or .gltf)', 'error')
     if (!form.name)  return flash('Please enter a furniture name', 'error')
 
     try {
@@ -82,7 +82,7 @@ export default function AdminPage() {
       payload.append('width', String(+form.width || 80))
       payload.append('depth', String(+form.depth || 80))
       payload.append('image', imageFile)
-      payload.append('model3d', model3d)
+      payload.append('model3dFile', model3dFile)
       payload.append('model3dName', model3dName)
 
       const created = await furnitureService.create(payload)
@@ -90,7 +90,7 @@ export default function AdminPage() {
       setStore((prev) => ({ ...prev, furniture: [item, ...prev.furniture] }))
       setPreview(null)
       setImageFile(null)
-      setModel3d(null)
+      setModel3dFile(null)
       setModel3dName('')
       setForm({ name:'', category:'sofa', price:'', width:'', depth:'' })
       flash('Furniture added successfully')
@@ -204,22 +204,22 @@ export default function AdminPage() {
 
           {/* Step 2 — 3D Model */}
           <div style={{ marginBottom:14 }}>
-            <div style={{ fontSize:'0.7rem', fontWeight:700, color: model3d ? '#43d9ad' : '#9b95ff', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:6, display:'flex', alignItems:'center', gap:6 }}>
-              <span style={{ width:16, height:16, borderRadius:'50%', background: model3d ? '#43d9ad' : 'rgba(108,99,255,0.5)', display:'inline-flex', alignItems:'center', justifyContent:'center', fontSize:9, color:'#fff', flexShrink:0 }}>{model3d ? <CheckCircle2 size={10} /> : '2'}</span>
+            <div style={{ fontSize:'0.7rem', fontWeight:700, color: model3dFile ? '#43d9ad' : '#9b95ff', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:6, display:'flex', alignItems:'center', gap:6 }}>
+              <span style={{ width:16, height:16, borderRadius:'50%', background: model3dFile ? '#43d9ad' : 'rgba(108,99,255,0.5)', display:'inline-flex', alignItems:'center', justifyContent:'center', fontSize:9, color:'#fff', flexShrink:0 }}>{model3dFile ? <CheckCircle2 size={10} /> : '2'}</span>
               3D Model — .glb or .gltf (required)
             </div>
-            <label style={{ display:'flex', alignItems:'center', gap:10, padding:'12px', borderRadius:10, border:`1px solid ${model3d ? 'rgba(67,217,173,0.5)' : 'rgba(255,255,255,0.1)'}`, background: model3d ? 'rgba(67,217,173,0.06)' : 'rgba(255,255,255,0.03)', cursor:'pointer', transition:'all .15s' }}>
+            <label style={{ display:'flex', alignItems:'center', gap:10, padding:'12px', borderRadius:10, border:`1px solid ${model3dFile ? 'rgba(67,217,173,0.5)' : 'rgba(255,255,255,0.1)'}`, background: model3dFile ? 'rgba(67,217,173,0.06)' : 'rgba(255,255,255,0.03)', cursor:'pointer', transition:'all .15s' }}>
               <Box size={22} />
               <div style={{ flex:1 }}>
-                <div style={{ fontSize:12, color: model3d ? '#43d9ad' : '#777', fontWeight:600 }}>
-                  {model3d ? model3dName : 'Click to upload .glb or .gltf'}
+                <div style={{ fontSize:12, color: model3dFile ? '#43d9ad' : '#777', fontWeight:600 }}>
+                  {model3dFile ? model3dName : 'Click to upload .glb or .gltf'}
                 </div>
                 <div style={{ fontSize:10, color:'#444', marginTop:2 }}>
                   Max ~20MB · auto-scales to furniture size in 3D view
                 </div>
               </div>
-              {model3d && (
-                <button onClick={e => { e.preventDefault(); setModel3d(null); setModel3dName('') }}
+              {model3dFile && (
+                <button onClick={e => { e.preventDefault(); setModel3dFile(null); setModel3dName('') }}
                   style={{ fontSize:10, color:'#ff6b6b', background:'none', border:'none', cursor:'pointer', flexShrink:0 }}><X size={12} /> Remove</button>
               )}
               <input type="file" accept=".glb,.gltf" style={{ display:'none' }}
@@ -227,9 +227,7 @@ export default function AdminPage() {
                   const f = e.target.files?.[0]
                   if (!f) return
                   setModel3dName(f.name)
-                  const r = new FileReader()
-                  r.onload = ev => setModel3d(ev.target.result)
-                  r.readAsDataURL(f)
+                  setModel3dFile(f)
                   e.target.value = ''
                 }} />
             </label>
@@ -239,7 +237,7 @@ export default function AdminPage() {
           <div style={{ display:'flex', gap:8, marginBottom:12, padding:'8px 10px', borderRadius:8, background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.06)' }}>
             <span style={{ fontSize:10, color: preview ? '#43d9ad' : '#555', display:'inline-flex', alignItems:'center', gap:4 }}>{preview ? <CheckCircle2 size={10} /> : <Circle size={10} />} 2D Image</span>
             <span style={{ color:'#333' }}>·</span>
-            <span style={{ fontSize:10, color: model3d ? '#43d9ad' : '#555', display:'inline-flex', alignItems:'center', gap:4 }}>{model3d ? <CheckCircle2 size={10} /> : <Circle size={10} />} 3D Model</span>
+            <span style={{ fontSize:10, color: model3dFile ? '#43d9ad' : '#555', display:'inline-flex', alignItems:'center', gap:4 }}>{model3dFile ? <CheckCircle2 size={10} /> : <Circle size={10} />} 3D Model</span>
             <span style={{ color:'#333' }}>·</span>
             <span style={{ fontSize:10, color: form.name ? '#43d9ad' : '#555', display:'inline-flex', alignItems:'center', gap:4 }}>{form.name ? <CheckCircle2 size={10} /> : <Circle size={10} />} Name</span>
           </div>
@@ -254,7 +252,7 @@ export default function AdminPage() {
             </select>
           </div>
           <button className="admin-submit-purple" onClick={addFurniture}
-            style={{ opacity: (preview && model3d && form.name) ? 1 : 0.5 }}>
+            style={{ opacity: (preview && model3dFile && form.name) ? 1 : 0.5 }}>
             Add Furniture
           </button>
         </div>
