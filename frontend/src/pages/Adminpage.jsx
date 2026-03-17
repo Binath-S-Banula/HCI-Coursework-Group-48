@@ -4,21 +4,25 @@ import { useDispatch, useSelector } from 'react-redux'
 import {
   Grid3X3,
   Box,
+  Globe,
   Image,
   CheckCircle2,
   Circle,
   X,
   Settings,
   LogOut,
+  Trash2,
 } from 'lucide-react'
 import { logout } from '../store/slices/authSlice'
 import { furnitureService } from '../services/furniture.service'
+import { projectService } from '../services/project.service'
 import '../styles/pages/AdminPage.css'
 
 const CATS = ['sofa','chair','table','bed','storage','lighting','kitchen','bathroom','decor']
 const NAV = [
   { id:'dashboard', icon: Grid3X3, label:'Dashboard' },
   { id:'furniture', icon: Box, label:'Furniture' },
+  { id:'designs', icon: Globe, label:'Designs' },
 ]
 
 function Field({ label, field, placeholder, type='text', obj, setObj }) {
@@ -35,7 +39,7 @@ export default function AdminPage() {
   const dispatch = useDispatch()
   const { user } = useSelector((s) => s.auth)
   const [page,    setPage]    = useState('dashboard')
-  const [store,   setStore]   = useState({ furniture: [] })
+  const [store,   setStore]   = useState({ furniture: [], projects: [] })
   const [form,    setForm]    = useState({ name:'', category:'sofa', price:'', width:'', depth:'' })
   const [preview, setPreview] = useState(null)
   const [imageFile, setImageFile] = useState(null)
@@ -59,14 +63,24 @@ export default function AdminPage() {
     try {
       const res = await furnitureService.getAll({ limit: 200 })
       const items = Array.isArray(res.data) ? res.data.map(mapFurniture) : []
-      setStore({ furniture: items })
+      setStore((prev) => ({ ...prev, furniture: items }))
     } catch {
       flash('Failed to load furniture', 'error')
     }
   }
 
+  const loadProjects = async () => {
+    try {
+      const items = await projectService.adminGetAll()
+      setStore((prev) => ({ ...prev, projects: Array.isArray(items) ? items : [] }))
+    } catch {
+      flash('Failed to load designs', 'error')
+    }
+  }
+
   useEffect(() => {
     loadFurniture()
+    loadProjects()
   }, [])
 
   const addFurniture = async () => {
@@ -109,6 +123,29 @@ export default function AdminPage() {
   }
   const handleLogout = () => { dispatch(logout()); navigate('/admin/login') }
 
+  const toggleProjectVisibility = async (project) => {
+    try {
+      const updated = await projectService.adminSetVisibility(project._id, !project.isPublic)
+      setStore((prev) => ({
+        ...prev,
+        projects: prev.projects.map((p) => (p._id === project._id ? updated : p)),
+      }))
+      flash(updated.isPublic ? 'Design is now public' : 'Design removed from gallery')
+    } catch {
+      flash('Failed to update design visibility', 'error')
+    }
+  }
+
+  const deleteProject = async (id) => {
+    try {
+      await projectService.adminDelete(id)
+      setStore((prev) => ({ ...prev, projects: prev.projects.filter((p) => p._id !== id) }))
+      flash('Design deleted')
+    } catch {
+      flash('Failed to delete design', 'error')
+    }
+  }
+
   const Flash = () => !msg ? null : (
     <div className={`admin-flash ${msg.type === 'error' ? 'admin-flash--error' : 'admin-flash--success'}`}>{msg.text}</div>
   )
@@ -145,6 +182,8 @@ export default function AdminPage() {
       <div className="admin-stats">
         {[
           { label:'Furniture',     value:store.furniture.length,                           icon: Box,       cls:'text-accent' },
+          { label:'Designs',       value:store.projects.length,                            icon: Globe,     cls:'text-teal' },
+          { label:'Shared',        value:store.projects.filter(p => p.isPublic).length,   icon: Globe,     cls:'text-blue' },
         ].map(s => (
           <div key={s.label} className="admin-stat-card">
             <div className="admin-stat-card__icon"><s.icon size={22} /></div>
@@ -267,6 +306,46 @@ export default function AdminPage() {
     </div>
   )
 
+  const DesignsView = () => (
+    <div>
+      <h2 style={{ fontFamily:'Syne,sans-serif', fontWeight:900, fontSize:'1.375rem', marginBottom:'1.5rem' }}>Design Moderation</h2>
+      <Flash />
+      <div className="admin-item-count">{store.projects.length} designs total</div>
+      {store.projects.length === 0 ? (
+        <div className="admin-empty">No designs found</div>
+      ) : (
+        <div className="admin-projects-list">
+          {store.projects.map((project) => (
+            <div key={project._id} className="admin-project-row">
+              <div className="admin-project-row__left">
+                <div className="admin-project-row__thumb">
+                  {project.thumbnail ? <img src={project.thumbnail} alt={project.name} /> : <Box size={16} />}
+                </div>
+                <div>
+                  <div className="admin-project-row__name">{project.name}</div>
+                  <div className="admin-project-row__meta">
+                    by {project.owner?.name || project.owner?.email || 'Unknown'} · {(project.placed || []).length} items
+                  </div>
+                </div>
+              </div>
+              <div className="admin-project-row__actions">
+                <button
+                  className={`admin-project-btn ${project.isPublic ? 'admin-project-btn--muted' : 'admin-project-btn--green'}`}
+                  onClick={() => toggleProjectVisibility(project)}
+                >
+                  <Globe size={12} /> {project.isPublic ? 'Unpublish' : 'Publish'}
+                </button>
+                <button className="admin-project-btn admin-project-btn--danger" onClick={() => deleteProject(project._id)}>
+                  <Trash2 size={12} /> Delete
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+
   const currentNav = NAV.find(n => n.id === page)
 
   return (
@@ -285,7 +364,7 @@ export default function AdminPage() {
           <div className="admin-sidebar__section-label">Menu</div>
           {NAV.map(item => {
             const active = page === item.id
-            const count = item.id==='furniture' ? store.furniture.length : null
+            const count = item.id==='furniture' ? store.furniture.length : item.id==='designs' ? store.projects.length : null
             return (
               <button key={item.id} onClick={() => setPage(item.id)}
                 className={`admin-nav-btn ${active ? 'admin-nav-btn--active' : 'admin-nav-btn--inactive'}`}>
@@ -318,11 +397,13 @@ export default function AdminPage() {
           <div className="admin-topbar__sub">
             {page==='dashboard' && 'Overview of your catalog'}
             {page==='furniture' && 'Manage furniture items for clients'}
+            {page==='designs' && 'Review shared projects and moderate gallery content'}
           </div>
         </header>
         <main className="admin-content">
           {page==='dashboard' && DashboardView()}
           {page==='furniture' && FurnitureView()}
+          {page==='designs' && DesignsView()}
         </main>
       </div>
     </div>
