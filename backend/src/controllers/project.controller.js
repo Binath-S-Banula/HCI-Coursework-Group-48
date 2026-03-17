@@ -60,7 +60,9 @@ const update = async (req, res, next) => {
       walls,
       placed,
       openings,
+      floor,
       floorTex,
+      floorColor,
       wallTex,
       wallColor,
       settings,
@@ -73,7 +75,9 @@ const update = async (req, res, next) => {
     if (walls !== undefined) project.walls = walls;
     if (placed !== undefined) project.placed = placed;
     if (openings !== undefined) project.openings = openings;
+    if (floor !== undefined) project.floor = floor;
     if (floorTex !== undefined) project.floorTex = floorTex;
+    if (floorColor !== undefined) project.floorColor = floorColor;
     if (wallTex !== undefined) project.wallTex = wallTex;
     if (wallColor !== undefined) project.wallColor = wallColor;
     if (settings !== undefined)
@@ -116,8 +120,11 @@ const duplicate = async (req, res, next) => {
       description: original.description,
       walls: original.walls,
       placed: original.placed,
+      floor: original.floor,
       floorTex: original.floorTex,
+      floorColor: original.floorColor,
       wallTex: original.wallTex,
+      wallColor: original.wallColor,
       settings: original.settings,
       owner: req.userId,
     });
