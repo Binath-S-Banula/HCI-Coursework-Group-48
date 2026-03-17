@@ -1,7 +1,9 @@
 import { Suspense, useEffect, useState, useMemo, useRef } from 'react'
 import { Canvas, useLoader, useThree, useFrame } from '@react-three/fiber'
 import { OrbitControls, Environment, Grid, Box, Plane, Sky, ContactShadows, useTexture, useGLTF, Clone } from '@react-three/drei'
+import { useDispatch, useSelector } from 'react-redux'
 import * as THREE from 'three'
+import { setLightIntensity, setTimeOfDay } from '../../store/slices/editorSlice'
 import '../../styles/editor/Canvas3D.css'
 
 // ── Auto-positions camera when room data arrives ─────────────────────────────
@@ -30,6 +32,57 @@ function CameraController({ hasWalls, cx, cz }) {
 
 const SCALE       = 0.05
 const WALL_HEIGHT = 2.8
+const MIN_LIGHT_INTENSITY = 0.2
+const MAX_LIGHT_INTENSITY = 2
+const SHADING_PRESETS = {
+  morning: {
+    ambient: 0.52,
+    directional: 1.1,
+    point: 0.65,
+    pointColor: '#fff2d9',
+    sunPosition: [35, 18, 28],
+    skyColor: '#f8e3c2',
+  },
+  day: {
+    ambient: 0.6,
+    directional: 1.4,
+    point: 0.8,
+    pointColor: '#fff9e6',
+    sunPosition: [100, 20, 100],
+    skyColor: '#d4e4f7',
+  },
+  evening: {
+    ambient: 0.42,
+    directional: 0.95,
+    point: 0.9,
+    pointColor: '#ffd4a6',
+    sunPosition: [-30, 10, -20],
+    skyColor: '#f2be91',
+  },
+  night: {
+    ambient: 0.24,
+    directional: 0.4,
+    point: 1.05,
+    pointColor: '#cbdcff',
+    sunPosition: [-100, -25, -90],
+    skyColor: '#0e1a2b',
+  },
+}
+
+function clampLightIntensity(value) {
+  return Math.min(Math.max(value, MIN_LIGHT_INTENSITY), MAX_LIGHT_INTENSITY)
+}
+
+function normalizeTimeOfDay(value) {
+  const normalized = String(value || '').toLowerCase()
+  return SHADING_PRESETS[normalized] ? normalized : 'day'
+}
+
+function shadeColor(color, scalar = 1) {
+  const c = new THREE.Color(color || '#8b6b4a')
+  c.multiplyScalar(scalar)
+  return `#${c.getHexString()}`
+}
 
 // ── Compute center offset from all walls so room is centered ─────────────────
 function getSceneCenter(walls, floor) {
@@ -372,7 +425,8 @@ function Floor({ walls, floor, floorTexUrl, floorColor, cx, cz }) {
 
 // ── 3D Furniture — clean geometry, image shown as floor decal ───────────────
 
-function Bed3D({ w, d }) {
+function Bed3D({ w, d, color }) {
+  const wood = shadeColor(color || '#8b6b4a', 1)
   const fh = 0.14
   const mh = 0.20
   const legs = [[-w/2+0.09,-d/2+0.09],[w/2-0.09,-d/2+0.09],[-w/2+0.09,d/2-0.09],[w/2-0.09,d/2-0.09]]
@@ -380,11 +434,11 @@ function Bed3D({ w, d }) {
     <group>
       {legs.map(([lx,lz],i) => (
         <Box key={i} args={[0.09,0.14,0.09]} position={[lx,0.07,lz]} castShadow receiveShadow>
-          <meshStandardMaterial color="#5c3d2e" roughness={0.8} />
+          <meshStandardMaterial color={shadeColor(wood, 0.75)} roughness={0.8} />
         </Box>
       ))}
       <Box args={[w, fh, d]} position={[0, 0.14+fh/2, 0]} castShadow receiveShadow>
-        <meshStandardMaterial color="#8b6b4a" roughness={0.85} />
+        <meshStandardMaterial color={wood} roughness={0.85} />
       </Box>
       <Box args={[w*0.93, mh, d*0.9]} position={[0, 0.14+fh+mh/2, 0]} castShadow receiveShadow>
         <meshStandardMaterial color="#f5f0e8" roughness={0.95} />
@@ -398,13 +452,14 @@ function Bed3D({ w, d }) {
         </Box>
       ))}
       <Box args={[w, 0.72, 0.11]} position={[0, 0.14+0.36, -d/2+0.055]} castShadow receiveShadow>
-        <meshStandardMaterial color="#6b4c30" roughness={0.85} />
+        <meshStandardMaterial color={shadeColor(wood, 0.8)} roughness={0.85} />
       </Box>
     </group>
   )
 }
 
-function Sofa3D({ w, d }) {
+function Sofa3D({ w, d, color }) {
+  const base = shadeColor(color || '#7272a0', 1)
   const sw    = Math.min(w, 2.4)
   const sd    = Math.min(d, 0.95)
   const sh    = 0.40
@@ -427,35 +482,36 @@ function Sofa3D({ w, d }) {
       ))}
       {/* Seat base — front portion only */}
       <Box args={[sw, sh, sd*0.62]} position={[0, legH+sh/2, sd*0.19]} castShadow receiveShadow>
-        <meshStandardMaterial color="#7272a0" roughness={0.9} />
+        <meshStandardMaterial color={base} roughness={0.9} />
       </Box>
       {/* Backrest — upright at back edge */}
       <Box args={[sw, backH, sd*0.14]} position={[0, legH+backH/2, -sd/2+sd*0.07]} castShadow receiveShadow>
-        <meshStandardMaterial color="#5e5e88" roughness={0.9} />
+        <meshStandardMaterial color={shadeColor(base, 0.85)} roughness={0.9} />
       </Box>
       {/* Armrests — left & right only */}
       {[-sw/2+armW/2, sw/2-armW/2].map((ax,i)=>(
         <Box key={i} args={[armW, sh+0.12, sd*0.76]} position={[ax, legH+(sh+0.12)/2, sd*0.12]} castShadow receiveShadow>
-          <meshStandardMaterial color="#5e5e88" roughness={0.9} />
+          <meshStandardMaterial color={shadeColor(base, 0.85)} roughness={0.9} />
         </Box>
       ))}
       {/* Seat cushions */}
       {Array.from({length:n},(_,i)=>(
         <Box key={i} args={[cw*0.88, 0.14, sd*0.55]} position={[-sw/2+armW+cw/2+i*cw, legH+sh+0.07, sd*0.15]} castShadow receiveShadow>
-          <meshStandardMaterial color="#8484b0" roughness={0.95} />
+          <meshStandardMaterial color={shadeColor(base, 1.12)} roughness={0.95} />
         </Box>
       ))}
       {/* Back cushions */}
       {Array.from({length:n},(_,i)=>(
         <Box key={i} args={[cw*0.86, backH*0.75, 0.14]} position={[-sw/2+armW+cw/2+i*cw, legH+backH*0.42, -sd/2+0.18]} castShadow receiveShadow>
-          <meshStandardMaterial color="#9090bc" roughness={0.95} />
+          <meshStandardMaterial color={shadeColor(base, 1.2)} roughness={0.95} />
         </Box>
       ))}
     </group>
   )
 }
 
-function Chair3D({ w, d }) {
+function Chair3D({ w, d, color }) {
+  const wood = shadeColor(color || '#7a5535', 1)
   // Cap to realistic chair size (max ~0.65m) regardless of canvas item size
   const cw = Math.min(w, 0.65)
   const cd = Math.min(d, 0.65)
@@ -468,30 +524,31 @@ function Chair3D({ w, d }) {
       {[[-cw/2+legW/2, -cd/2+legW/2],[cw/2-legW/2, -cd/2+legW/2],
         [-cw/2+legW/2,  cd/2-legW/2],[cw/2-legW/2,  cd/2-legW/2]].map(([lx,lz],i)=>(
         <Box key={i} args={[legW, legH, legW]} position={[lx, legH/2, lz]} castShadow receiveShadow>
-          <meshStandardMaterial color="#4a2e1a" roughness={0.8} />
+          <meshStandardMaterial color={shadeColor(wood, 0.7)} roughness={0.8} />
         </Box>
       ))}
       {/* Seat frame */}
       <Box args={[cw, 0.06, cd]} position={[0, legH+0.03, 0]} castShadow receiveShadow>
-        <meshStandardMaterial color="#7a5535" roughness={0.8} />
+        <meshStandardMaterial color={wood} roughness={0.8} />
       </Box>
       {/* Seat cushion */}
       <Box args={[cw*0.9, 0.1, cd*0.9]} position={[0, legH+0.11, 0]} castShadow receiveShadow>
-        <meshStandardMaterial color="#9e8878" roughness={0.95} />
+        <meshStandardMaterial color={shadeColor(wood, 1.25)} roughness={0.95} />
       </Box>
       {/* Backrest — tall, upright at BACK of seat only */}
       <Box args={[cw, 0.55, 0.07]} position={[0, legH+0.38, -cd/2+0.035]} castShadow receiveShadow>
-        <meshStandardMaterial color="#7a5535" roughness={0.8} />
+        <meshStandardMaterial color={wood} roughness={0.8} />
       </Box>
       {/* Backrest cushion */}
       <Box args={[cw*0.88, 0.44, 0.05]} position={[0, legH+0.39, -cd/2+0.085]} castShadow receiveShadow>
-        <meshStandardMaterial color="#9e8878" roughness={0.95} />
+        <meshStandardMaterial color={shadeColor(wood, 1.25)} roughness={0.95} />
       </Box>
     </group>
   )
 }
 
-function Table3D({ w, d }) {
+function Table3D({ w, d, color }) {
+  const wood = shadeColor(color || '#c8a228', 1)
   const tw     = Math.min(w, 2.0)   // cap width
   const td     = Math.min(d, 1.2)   // cap depth
   const legH   = 0.72
@@ -503,17 +560,17 @@ function Table3D({ w, d }) {
     <group>
       {/* Tabletop */}
       <Box args={[tw, topH, td]} position={[0, legH+topH/2, 0]} castShadow receiveShadow>
-        <meshStandardMaterial color="#c8a228" roughness={0.3} metalness={0.05} />
+        <meshStandardMaterial color={wood} roughness={0.3} metalness={0.05} />
       </Box>
       {isRound ? (
         <>
           {/* Round table: central pedestal + cross base */}
           <Box args={[legW*1.5, legH, legW*1.5]} position={[0, legH/2, 0]} castShadow receiveShadow>
-            <meshStandardMaterial color="#8b6914" roughness={0.6} />
+            <meshStandardMaterial color={shadeColor(wood, 0.75)} roughness={0.6} />
           </Box>
           {[[tw*0.28,0],[-tw*0.28,0],[0,td*0.28],[0,-td*0.28]].map(([bx,bz],i)=>(
             <Box key={i} args={[tw*0.28,0.05,legW]} position={[bx*0.5,0.025,bz*0.5]} castShadow receiveShadow>
-              <meshStandardMaterial color="#7a5510" roughness={0.6} />
+              <meshStandardMaterial color={shadeColor(wood, 0.65)} roughness={0.6} />
             </Box>
           ))}
         </>
@@ -522,7 +579,7 @@ function Table3D({ w, d }) {
         [[-tw/2+legW/2,-td/2+legW/2],[tw/2-legW/2,-td/2+legW/2],
          [-tw/2+legW/2, td/2-legW/2],[tw/2-legW/2, td/2-legW/2]].map(([lx,lz],i)=>(
           <Box key={i} args={[legW,legH,legW]} position={[lx,legH/2,lz]} castShadow receiveShadow>
-            <meshStandardMaterial color="#7a5510" roughness={0.7} />
+            <meshStandardMaterial color={shadeColor(wood, 0.65)} roughness={0.7} />
           </Box>
         ))
       )}
@@ -530,17 +587,18 @@ function Table3D({ w, d }) {
   )
 }
 
-function Storage3D({ w, d }) {
+function Storage3D({ w, d, color }) {
+  const wood = shadeColor(color || '#c8a97e', 1)
   const h = Math.min(Math.max(w*0.9, 0.8), 1.6)
   const shelves = Math.max(1, Math.round(h/0.38) - 1)
   return (
     <group>
       <Box args={[w, h, d]} position={[0, h/2, 0]} castShadow receiveShadow>
-        <meshStandardMaterial color="#c8a97e" roughness={0.8} />
+        <meshStandardMaterial color={wood} roughness={0.8} />
       </Box>
       {Array.from({length:shelves},(_,i)=>(
         <Box key={i} args={[w*0.97,0.018,d*0.97]} position={[0, h/(shelves+1)*(i+1), 0]}>
-          <meshStandardMaterial color="#9a7a4e" roughness={0.6} />
+          <meshStandardMaterial color={shadeColor(wood, 0.75)} roughness={0.6} />
         </Box>
       ))}
       <Box args={[0.18,0.04,0.04]} position={[0, h*0.5, d/2+0.02]} castShadow>
@@ -550,14 +608,15 @@ function Storage3D({ w, d }) {
   )
 }
 
-function Lighting3D({ w, d }) {
+function Lighting3D({ w, d, color }) {
+  const lampColor = shadeColor(color || '#fffbe0', 1)
   return (
     <group>
       <Box args={[0.06,1.5,0.06]} position={[0,0.75,0]} castShadow>
         <meshStandardMaterial color="#aaa" roughness={0.3} metalness={0.6} />
       </Box>
       <Box args={[Math.min(w,0.45), 0.22, Math.min(d,0.45)]} position={[0,1.56,0]} castShadow>
-        <meshStandardMaterial color="#fffbe0" roughness={0.05} emissive="#ffe060" emissiveIntensity={0.7} />
+        <meshStandardMaterial color={lampColor} roughness={0.05} emissive={shadeColor(lampColor, 0.75)} emissiveIntensity={0.7} />
       </Box>
     </group>
   )
@@ -599,10 +658,30 @@ function resolveModelUrl(model3d) {
   return model3d.startsWith('data:') ? base64ToBlobUrl(model3d) : model3d
 }
 
-function CustomModel({ url, w, d }) {
+function CustomModel({ url, w, d, color }) {
   const { scene } = useGLTF(url)
+  const tintedScene = useMemo(() => scene.clone(true), [scene])
+
+  useEffect(() => {
+    if (!color) return
+    tintedScene.traverse((child) => {
+      if (!child.isMesh || !child.material) return
+      const applyTint = (material) => {
+        if (!material || !material.color) return
+        const cloned = material.clone()
+        cloned.color = new THREE.Color(color)
+        child.material = cloned
+      }
+      if (Array.isArray(child.material)) {
+        child.material.forEach(applyTint)
+      } else {
+        applyTint(child.material)
+      }
+    })
+  }, [tintedScene, color])
+
   // Auto-scale model to fit the furniture footprint (w × d)
-  const box = new THREE.Box3().setFromObject(scene)
+  const box = new THREE.Box3().setFromObject(tintedScene)
   const size = new THREE.Vector3()
   box.getSize(size)
   const scaleX = w / (size.x || 1)
@@ -611,7 +690,7 @@ function CustomModel({ url, w, d }) {
   const offsetY = -box.min.y * scale         // sit on floor
   return (
     <Clone
-      object={scene}
+      object={tintedScene}
       scale={[scale, scale, scale]}
       position={[0, offsetY, 0]}
       castShadow
@@ -626,26 +705,27 @@ function FurnitureItem3D({ item, cx, cz }) {
   const w   = Math.max((item.w || 80) * SCALE, 0.3)
   const d   = Math.max((item.h || 80) * SCALE, 0.3)
   const cat = (item.cat || item.category || item.name || '').toLowerCase()
+  const color = item.color || null
 
   // Support both old base64 models and uploaded model URLs
   const modelUrl = resolveModelUrl(item.model3d)
 
   const fallback = (() => {
-    if (cat.includes('bed'))                                                          return <Bed3D w={w} d={d} />
-    if (cat.includes('sofa') || cat.includes('couch'))                               return <Sofa3D w={w} d={d} />
-    if (cat.includes('chair') || cat.includes('armchair') || cat.includes('stool'))  return <Chair3D w={w} d={d} />
-    if (cat.includes('table') || cat.includes('desk') || cat.includes('coffee'))     return <Table3D w={w} d={d} />
-    if (cat.includes('storage') || cat.includes('cabinet') || cat.includes('shelf') || cat.includes('wardrobe')) return <Storage3D w={w} d={d} />
-    if (cat.includes('light') || cat.includes('lamp'))                               return <Lighting3D w={w} d={d} />
+    if (cat.includes('bed'))                                                          return <Bed3D w={w} d={d} color={color} />
+    if (cat.includes('sofa') || cat.includes('couch'))                               return <Sofa3D w={w} d={d} color={color} />
+    if (cat.includes('chair') || cat.includes('armchair') || cat.includes('stool'))  return <Chair3D w={w} d={d} color={color} />
+    if (cat.includes('table') || cat.includes('desk') || cat.includes('coffee'))     return <Table3D w={w} d={d} color={color} />
+    if (cat.includes('storage') || cat.includes('cabinet') || cat.includes('shelf') || cat.includes('wardrobe')) return <Storage3D w={w} d={d} color={color} />
+    if (cat.includes('light') || cat.includes('lamp'))                               return <Lighting3D w={w} d={d} color={color} />
     if (cat.includes('kitchen'))   return <GenericFurniture3D w={w} d={d} color="#e8e0d0" />
     if (cat.includes('bathroom'))  return <GenericFurniture3D w={w} d={d} color="#d4eef7" />
     if (cat.includes('decor'))     return <GenericFurniture3D w={w} d={d} color="#d4c8a0" />
-    return <GenericFurniture3D w={w} d={d} />
+    return <GenericFurniture3D w={w} d={d} color={color || undefined} />
   })()
 
   const model = modelUrl ? (
     <Suspense fallback={fallback}>
-      <CustomModel url={modelUrl} w={w} d={d} />
+      <CustomModel url={modelUrl} w={w} d={d} color={color} />
     </Suspense>
   ) : fallback
 
@@ -709,7 +789,29 @@ function LiveRoom({ walls, floor, placed, openings, wallTexUrl, floorTexUrl, wal
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function Canvas3D() {
+  const dispatch = useDispatch()
+  const lightIntensity = useSelector((s) => s.editor.lightIntensity)
+  const timeOfDay = useSelector((s) => s.editor.timeOfDay)
   const [liveData, setLiveData] = useState({ walls: [], floor: null, placed: [], openings: [], floorTex: null, floorColor: '#f5f2ee', wallTex: null, wallColor: '#e8e2d8' })
+
+  useEffect(() => {
+    const persisted = Number(window.__editorLightIntensity)
+    if (Number.isFinite(persisted)) {
+      dispatch(setLightIntensity(clampLightIntensity(persisted)))
+    }
+  }, [dispatch])
+
+  useEffect(() => {
+    dispatch(setTimeOfDay(normalizeTimeOfDay(window.__editorTimeOfDay)))
+  }, [dispatch])
+
+  useEffect(() => {
+    window.__editorLightIntensity = lightIntensity
+  }, [lightIntensity])
+
+  useEffect(() => {
+    window.__editorTimeOfDay = normalizeTimeOfDay(timeOfDay)
+  }, [timeOfDay])
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -725,8 +827,8 @@ export default function Canvas3D() {
           const wallTex   = window.__editorWallTex   || null
           const wallColor = window.__editorWallColor || '#e8e2d8'
           // Always update to catch resize/move changes in placed items
-          const placedSig = placed.map(p => `${p.id}:${p.x},${p.y},${p.w},${p.h},${p.angle||0}`).join('|')
-          const prevSig   = prev.placed.map(p => `${p.id}:${p.x},${p.y},${p.w},${p.h},${p.angle||0}`).join('|')
+          const placedSig = placed.map(p => `${p.id}:${p.x},${p.y},${p.w},${p.h},${p.angle||0},${p.color||''}`).join('|')
+          const prevSig   = prev.placed.map(p => `${p.id}:${p.x},${p.y},${p.w},${p.h},${p.angle||0},${p.color||''}`).join('|')
           if (
             placedSig === prevSig &&
             walls.length === prev.walls.length &&
@@ -745,6 +847,7 @@ export default function Canvas3D() {
   }, [])
 
   const hasDesign = liveData.walls.length > 0 || liveData.placed.length > 0 || (liveData.floor && liveData.floor.w > 0 && liveData.floor.h > 0)
+  const preset = SHADING_PRESETS[normalizeTimeOfDay(timeOfDay)]
 
   // Position camera above and in front of room
   const { cx: rcx, cz: rcz } = useMemo(() => getSceneCenter(liveData.walls, liveData.floor), [liveData.walls, liveData.floor])
@@ -754,20 +857,20 @@ export default function Canvas3D() {
       <Canvas
         shadows
         camera={{ position: [6, 5, 8], fov: 50 }}
-        style={{ background:'#d4e4f7' }}
+        style={{ background: preset.skyColor }}
         gl={{ preserveDrawingBuffer: true }}
       >
         <Suspense fallback={null}>
           <CameraController hasWalls={hasDesign} cx={rcx} cz={rcz} />
-          <ambientLight intensity={0.6} />
-          <directionalLight position={[10, 12, 8]} intensity={1.4} castShadow
+          <ambientLight intensity={preset.ambient * lightIntensity} />
+          <directionalLight position={[10, 12, 8]} intensity={preset.directional * lightIntensity} castShadow
             shadow-mapSize={[2048, 2048]}
             shadow-camera-left={-15} shadow-camera-right={15}
             shadow-camera-top={15}  shadow-camera-bottom={-15}
           />
-          <pointLight position={[0, 2.4, 0]} intensity={0.8} color="#fff9e6" />
+          <pointLight position={[0, 2.4, 0]} intensity={preset.point * lightIntensity} color={preset.pointColor} />
 
-          <Sky sunPosition={[100, 20, 100]} />
+          <Sky sunPosition={preset.sunPosition} />
           <Environment preset="apartment" />
 
           {hasDesign ? (
@@ -811,6 +914,38 @@ export default function Canvas3D() {
         <span>🖱 Drag to orbit</span>
         <span>🖱 Right-drag to pan</span>
         <span>🖲 Scroll to zoom</span>
+      </div>
+
+      <div className="canvas3d-lighting">
+        <label htmlFor="canvas3d-light-intensity" className="canvas3d-lighting__label">Shading</label>
+        <div className="canvas3d-lighting__presets">
+          {[
+            { id: 'morning', label: 'Morning' },
+            { id: 'day', label: 'Day' },
+            { id: 'evening', label: 'Evening' },
+            { id: 'night', label: 'Night' },
+          ].map((presetItem) => (
+            <button
+              key={presetItem.id}
+              type="button"
+              onClick={() => dispatch(setTimeOfDay(presetItem.id))}
+              className={`canvas3d-lighting__preset-btn ${timeOfDay === presetItem.id ? 'canvas3d-lighting__preset-btn--active' : ''}`}
+            >
+              {presetItem.label}
+            </button>
+          ))}
+        </div>
+        <input
+          id="canvas3d-light-intensity"
+          type="range"
+          min={MIN_LIGHT_INTENSITY}
+          max={MAX_LIGHT_INTENSITY}
+          step={0.05}
+          value={lightIntensity}
+          onChange={(e) => dispatch(setLightIntensity(Number(e.target.value)))}
+          className="canvas3d-lighting__slider"
+        />
+        <span className="canvas3d-lighting__value">{Math.round(lightIntensity * 100)}%</span>
       </div>
 
       {/* Status */}
