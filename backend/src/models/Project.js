@@ -11,9 +11,12 @@ const placedItemSchema = new mongoose.Schema({
   name:     String,
   image:    String,
   category: String,
+  cat:      String,
   x: Number, y: Number,
   w: Number, h: Number,
   width: Number, depth: Number,
+  model3d: String,
+  model3dName: String,
 }, { _id: false })
 
 const projectSchema = new mongoose.Schema({
@@ -26,6 +29,7 @@ const projectSchema = new mongoose.Schema({
   // 2D design data
   walls:    [wallSchema],
   placed:   [placedItemSchema],   // placed furniture items
+  openings: [{ type: mongoose.Schema.Types.Mixed }],
   floorTex: {                     // selected floor texture
     id:    { type: String, default: null },
     name:  { type: String, default: null },
@@ -36,6 +40,7 @@ const projectSchema = new mongoose.Schema({
     name:  { type: String, default: null },
     image: { type: String, default: null },
   },
+  wallColor: { type: String, default: '#e8e2d8' },
 
   // Settings
   settings: {
