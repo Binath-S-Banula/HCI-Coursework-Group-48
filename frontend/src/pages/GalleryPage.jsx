@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSelector } from 'react-redux'
+import { projectService } from '../services/project.service'
 import '../styles/pages/GalleryPage.css'
 
 const CATEGORIES = ['all', 'living', 'bedroom', 'kitchen', 'bathroom', 'office', 'dining', 'other']
@@ -62,6 +63,15 @@ export default function GalleryPage() {
     else navigate('/editor')
   }
 
+  const handleCreateDesign = async () => {
+    try {
+      const newProject = await projectService.create({ name: 'New Project' })
+      navigate(`/editor/${newProject._id}`)
+    } catch {
+      navigate('/editor')
+    }
+  }
+
   return (
     <div className="gallery-page">
 
@@ -80,7 +90,7 @@ export default function GalleryPage() {
           <p className="gallery-hero__subtitle">
             Browse thousands of home designs from our community. Get inspired, remix, or start fresh.
           </p>
-          <button className="gallery-hero__btn" onClick={() => navigate('/editor')}>
+          <button className="gallery-hero__btn" onClick={handleCreateDesign}>
             + Create Your Design
           </button>
         </div>
