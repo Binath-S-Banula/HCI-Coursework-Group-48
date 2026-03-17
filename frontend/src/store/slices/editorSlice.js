@@ -2,7 +2,7 @@ import { createSlice } from '@reduxjs/toolkit'
 
 const initialState = {
   mode:             '2d',       // '2d' | '3d'
-  activeTool:       'select',   // 'select'|'wall'|'room'|'door'|'window'|'measure'
+  activeTool:       'select',   // 'select'|'wall'|'floor'|'room'|'door'|'window'|'measure'
   activeRoomId:     null,
   selectedObjectId: null,
   zoom:             1,
