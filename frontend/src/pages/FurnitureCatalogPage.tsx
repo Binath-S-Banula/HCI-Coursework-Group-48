@@ -206,10 +206,6 @@ export default function FurnitureCatalogPage() {
               <div className="catalog-empty__icon">🪑</div>
               <h3 className="catalog-empty__title">No items found</h3>
               <p className="catalog-empty__sub">Try a different search or add items via Admin.</p>
-              <div className="catalog-empty__actions">
-                <button className="catalog-empty__btn-clear" onClick={() => { setSearch(''); setActiveCat('all') }}>Clear filters</button>
-                <button className="catalog-empty__btn-admin" onClick={() => navigate('/admin')}>Go to Admin</button>
-              </div>
             </div>
           ) : view === 'grid' ? (
             <div className="catalog-grid">
