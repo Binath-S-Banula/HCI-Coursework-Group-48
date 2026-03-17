@@ -7,26 +7,26 @@ const getAdminAssets = () => JSON.parse(localStorage.getItem('adminAssets') || '
 const CATEGORIES = ['all','sofa','chair','table','bed','storage','light','kitchen','bathroom','decor']
 
 const DEMO_ITEMS = [
-  { id: 'demo1', name: 'Milano Sofa',       category: 'sofa',    width: 220, depth: 90,  rating: 4.8, reviews: 124, image: null, colors: ['#c8a878','#4a4a6a','#8b5e3c'] },
-  { id: 'demo2', name: 'Arc Floor Lamp',    category: 'light',   width: 40,  depth: 40,  rating: 4.6, reviews: 87,  image: null, colors: ['#c0c0c0','#1a1a1a','#b8860b'] },
-  { id: 'demo3', name: 'Oslo Dining Table', category: 'table',   width: 180, depth: 90,  rating: 4.9, reviews: 203, image: null, colors: ['#8b6914','#d4c4a8','#2d2d2d'] },
-  { id: 'demo4', name: 'Nordic Bed Frame',  category: 'bed',     width: 180, depth: 210, rating: 4.7, reviews: 156, image: null, colors: ['#e8e2d8','#6b4c2a','#1a1a2e'] },
-  { id: 'demo5', name: 'Barrel Armchair',   category: 'chair',   width: 80,  depth: 80,  rating: 4.5, reviews: 91,  image: null, colors: ['#c8a878','#4a7a9b','#228b22'] },
-  { id: 'demo6', name: 'Oak Bookshelf',     category: 'storage', width: 90,  depth: 35,  rating: 4.4, reviews: 72,  image: null, colors: ['#8b6914','#d4c4a8','#2d2d2d'] },
-  { id: 'demo7', name: 'Pendant Light',     category: 'light',   width: 40,  depth: 40,  rating: 4.7, reviews: 118, image: null, colors: ['#c0c0c0','#1a1a1a','#b8860b'] },
-  { id: 'demo8', name: 'Coffee Table',      category: 'table',   width: 120, depth: 60,  rating: 4.6, reviews: 145, image: null, colors: ['#c8a878','#1a1a1a','#d4c4a8'] },
+  // { id: 'demo1', name: 'Milano Sofa',       category: 'sofa',    width: 220, depth: 90,  rating: 4.8, reviews: 124, image: null, colors: ['#c8a878','#4a4a6a','#8b5e3c'] },
+  // { id: 'demo2', name: 'Arc Floor Lamp',    category: 'light',   width: 40,  depth: 40,  rating: 4.6, reviews: 87,  image: null, colors: ['#c0c0c0','#1a1a1a','#b8860b'] },
+  // { id: 'demo3', name: 'Oslo Dining Table', category: 'table',   width: 180, depth: 90,  rating: 4.9, reviews: 203, image: null, colors: ['#8b6914','#d4c4a8','#2d2d2d'] },
+  // { id: 'demo4', name: 'Nordic Bed Frame',  category: 'bed',     width: 180, depth: 210, rating: 4.7, reviews: 156, image: null, colors: ['#e8e2d8','#6b4c2a','#1a1a2e'] },
+  // { id: 'demo5', name: 'Barrel Armchair',   category: 'chair',   width: 80,  depth: 80,  rating: 4.5, reviews: 91,  image: null, colors: ['#c8a878','#4a7a9b','#228b22'] },
+  // { id: 'demo6', name: 'Oak Bookshelf',     category: 'storage', width: 90,  depth: 35,  rating: 4.4, reviews: 72,  image: null, colors: ['#8b6914','#d4c4a8','#2d2d2d'] },
+  // { id: 'demo7', name: 'Pendant Light',     category: 'light',   width: 40,  depth: 40,  rating: 4.7, reviews: 118, image: null, colors: ['#c0c0c0','#1a1a1a','#b8860b'] },
+  // { id: 'demo8', name: 'Coffee Table',      category: 'table',   width: 120, depth: 60,  rating: 4.6, reviews: 145, image: null, colors: ['#c8a878','#1a1a1a','#d4c4a8'] },
 ]
 
 const ITEM_GRADIENTS = {
-  sofa:    'linear-gradient(135deg,#1a1535,#2d2a6e)',
-  chair:   'linear-gradient(135deg,#0f1f2e,#1a3a4a)',
-  table:   'linear-gradient(135deg,#1a1206,#3d2a0a)',
-  bed:     'linear-gradient(135deg,#0d1b2a,#1b3a5f)',
-  storage: 'linear-gradient(135deg,#101a10,#1a3a1a)',
-  light:   'linear-gradient(135deg,#1a1a06,#3d3a10)',
-  kitchen: 'linear-gradient(135deg,#1a0606,#3d1a1a)',
-  bathroom:'linear-gradient(135deg,#061a1a,#0d3a3a)',
-  decor:   'linear-gradient(135deg,#1a0a1a,#3d1a3d)',
+  // sofa:    'linear-gradient(135deg,#1a1535,#2d2a6e)',
+  // chair:   'linear-gradient(135deg,#0f1f2e,#1a3a4a)',
+  // table:   'linear-gradient(135deg,#1a1206,#3d2a0a)',
+  // bed:     'linear-gradient(135deg,#0d1b2a,#1b3a5f)',
+  // storage: 'linear-gradient(135deg,#101a10,#1a3a1a)',
+  // light:   'linear-gradient(135deg,#1a1a06,#3d3a10)',
+  // kitchen: 'linear-gradient(135deg,#1a0606,#3d1a1a)',
+  // bathroom:'linear-gradient(135deg,#061a1a,#0d3a3a)',
+  // decor:   'linear-gradient(135deg,#1a0a1a,#3d1a3d)',
 }
 const ITEM_EMOJIS = { sofa:'🛋️',chair:'🪑',table:'🪵',bed:'🛏️',storage:'🗄️',light:'💡',kitchen:'🍳',bathroom:'🪥',decor:'🪴',default:'📦' }
 
