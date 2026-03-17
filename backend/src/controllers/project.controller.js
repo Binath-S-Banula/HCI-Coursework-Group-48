@@ -77,6 +77,8 @@ const update = async (req, res, next) => {
       floorColor,
       wallTex,
       wallColor,
+      lightIntensity,
+      timeOfDay,
       settings,
       thumbnail,
       isPublic,
@@ -92,6 +94,8 @@ const update = async (req, res, next) => {
     if (floorColor !== undefined) project.floorColor = floorColor;
     if (wallTex !== undefined) project.wallTex = wallTex;
     if (wallColor !== undefined) project.wallColor = wallColor;
+    if (lightIntensity !== undefined) project.lightIntensity = lightIntensity;
+    if (timeOfDay !== undefined) project.timeOfDay = timeOfDay;
     if (settings !== undefined)
       project.settings = { ...project.settings, ...settings };
     if (thumbnail !== undefined) project.thumbnail = thumbnail;
@@ -143,6 +147,8 @@ const duplicate = async (req, res, next) => {
       floorColor: original.floorColor,
       wallTex: original.wallTex,
       wallColor: original.wallColor,
+      lightIntensity: original.lightIntensity,
+      timeOfDay: original.timeOfDay,
       settings: original.settings,
       owner: req.userId,
     });
