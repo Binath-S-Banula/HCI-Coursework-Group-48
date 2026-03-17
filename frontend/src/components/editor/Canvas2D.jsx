@@ -773,6 +773,13 @@ export default function Canvas2D({ onDesignChange }) {
     ))
   }
 
+  const updateSelectedColor = (color) => {
+    if (!selectedItem || !color) return
+    setPlaced(prev => prev.map(p =>
+      p.id === selectedItem ? { ...p, color } : p
+    ))
+  }
+
   const deleteSelected = () => {
     if (selectedItem) {
       const newPlaced = placedRef.current.filter(p => p.id !== selectedItem)
@@ -837,6 +844,7 @@ export default function Canvas2D({ onDesignChange }) {
       w: item.w || item.width || 80,
       h: item.d || item.depth || 80,
       angle: 0,
+      color: item.color || '#8b6b4a',
       model3d: item.model3d || null,
     }
     // Save snapshot BEFORE adding
@@ -901,6 +909,15 @@ export default function Canvas2D({ onDesignChange }) {
               <span className="canvas2d-toolbar__hint">
                 {selItem.name} · {Math.round(selItem.w * 5)}×{Math.round(selItem.h * 5)}cm
               </span>
+              <label className="canvas2d-toolbar__hint" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                Color
+                <input
+                  type="color"
+                  value={selItem.color || '#8b6b4a'}
+                  onChange={(e) => updateSelectedColor(e.target.value)}
+                  style={{ width: 26, height: 20, padding: 0, border: 'none', background: 'transparent', cursor: 'pointer' }}
+                />
+              </label>
               <button onClick={() => rotateSelected(-Math.PI/2)} className="canvas2d-toolbar__action-btn canvas2d-toolbar__action-btn--purple">↺ 90°</button>
               <button onClick={() => rotateSelected( Math.PI/2)} className="canvas2d-toolbar__action-btn canvas2d-toolbar__action-btn--purple">↻ 90°</button>
               <button onClick={deleteSelected} className="canvas2d-toolbar__action-btn canvas2d-toolbar__action-btn--red">🗑 Delete</button>
