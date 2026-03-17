@@ -108,8 +108,9 @@ export default function AdminPage() {
       setModel3dName('')
       setForm({ name:'', category:'sofa', price:'', width:'', depth:'' })
       flash('Furniture added successfully')
-    } catch {
-      flash('Failed to add furniture', 'error')
+    } catch (err) {
+      const message = err?.response?.data?.message || 'Failed to add furniture'
+      flash(message, 'error')
     }
   }
 
