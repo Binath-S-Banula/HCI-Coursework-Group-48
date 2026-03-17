@@ -45,6 +45,8 @@ const create = async (req, res, next) => {
       depth,
       height,
       imageUrl,
+      model3d,
+      model3dName,
       tags,
       isFeatured,
     } = req.body;
@@ -64,6 +66,8 @@ const create = async (req, res, next) => {
       depth,
       height,
       imageUrl,
+      model3d,
+      model3dName,
       tags,
       isFeatured,
       uploadedBy: req.userId,
