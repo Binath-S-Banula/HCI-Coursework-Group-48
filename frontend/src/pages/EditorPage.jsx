@@ -7,26 +7,9 @@ import Canvas3D from '../components/editor/Canvas3D'
 import EditorToolbar from '../components/editor/EditorToolbar'
 import FurniturePanel from '../components/furniture/FurniturePanel'
 import PropertiesPanel from '../components/editor/PropertiesPanel'
+import { projectService } from '../services/project.service'
 import toast from 'react-hot-toast'
 import '../styles/pages/EditorPage.css'
-
-// ── localStorage helpers ──────────────────────────────────────────────
-const LS_KEY      = 'homeplan3d_projects'
-const loadAll     = () => { try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]') } catch { return [] } }
-const saveAll     = (list) => localStorage.setItem(LS_KEY, JSON.stringify(list))
-
-function loadProject(id) {
-  return loadAll().find(p => p.id === id) || null
-}
-
-function persistProject(id, patch) {
-  const list = loadAll()
-  const idx  = list.findIndex(p => p.id === id)
-  if (idx === -1) return
-  list[idx] = { ...list[idx], ...patch, updatedAt: new Date().toISOString() }
-  saveAll(list)
-  return list[idx]
-}
 
 // ── Editor Page ───────────────────────────────────────────────────────
 export default function EditorPage() {
@@ -48,25 +31,29 @@ export default function EditorPage() {
   useEffect(() => {
     if (!projectId) return
 
-    const proj = loadProject(projectId)
-    if (!proj) {
-      toast.error('Project not found')
-      navigate('/dashboard')
-      return
+    const loadProject = async () => {
+      try {
+        const proj = await projectService.getOne(projectId)
+        setProject(proj)
+        setProjectName(proj.name)
+
+        // Restore canvas state into globals so Canvas2D/3D can read them
+        if (proj.walls)     window.__editorWalls     = proj.walls
+        if (proj.placed)    window.__editorPlaced    = proj.placed
+        if (proj.openings)  window.__editorOpenings  = proj.openings
+        if (proj.floorTex)  window.__editorFloorTex  = proj.floorTex
+        if (proj.wallTex)   window.__editorWallTex   = proj.wallTex
+        window.__editorWallColor = proj.wallColor || '#e8e2d8'
+
+        // Signal canvases to reload from globals
+        window.__editorRestoreSignal = Date.now()
+      } catch {
+        toast.error('Project not found')
+        navigate('/dashboard')
+      }
     }
-    setProject(proj)
-    setProjectName(proj.name)
 
-    // Restore canvas state into globals so Canvas2D/3D can read them
-    if (proj.walls)     window.__editorWalls     = proj.walls
-    if (proj.placed)    window.__editorPlaced    = proj.placed
-    if (proj.openings)  window.__editorOpenings  = proj.openings
-    if (proj.floorTex)  window.__editorFloorTex  = proj.floorTex
-    if (proj.wallTex)   window.__editorWallTex   = proj.wallTex
-    window.__editorWallColor = proj.wallColor || '#e8e2d8'
-
-    // Signal canvases to reload from globals
-    window.__editorRestoreSignal = Date.now()
+    loadProject()
   }, [projectId])
 
   // ── Zoom helper ───────────────────────────────────────────────────
@@ -113,15 +100,21 @@ export default function EditorPage() {
 
     const state = collectState()
     const patch = { name: projectName, ...state }
-    persistProject(projectId, patch)
-    setLastSaved(new Date())
-
-    if (!silent) {
-      setTimeout(() => {
-        setIsSaving(false)
-        toast.success('Project saved!')
-      }, 500)
-    }
+    projectService.update(projectId, patch)
+      .then((saved) => {
+        setProject(saved)
+        setLastSaved(new Date())
+        if (!silent) {
+          setIsSaving(false)
+          toast.success('Project saved!')
+        }
+      })
+      .catch(() => {
+        if (!silent) {
+          setIsSaving(false)
+          toast.error('Failed to save project')
+        }
+      })
   }
 
   // ── Rename ────────────────────────────────────────────────────────
@@ -129,7 +122,7 @@ export default function EditorPage() {
     const name = newName.trim() || projectName
     setProjectName(name)
     setRenamingTitle(false)
-    if (projectId) persistProject(projectId, { name })
+    if (projectId) projectService.update(projectId, { name }).catch(() => {})
   }
 
   return (
