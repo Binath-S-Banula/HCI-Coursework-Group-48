@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Armchair, Heart, HeartOff, LayoutGrid, List, Paintbrush, Search } from 'lucide-react'
+import { furnitureService } from '../services/furniture.service'
 import '../styles/pages/FurnitureCatalogPage.css'
 
-const getAdminAssets = () => JSON.parse(localStorage.getItem('adminAssets') || '{"furniture":[],"textures":[]}')
-
-const CATEGORIES = ['all','sofa','chair','table','bed','storage','light','kitchen','bathroom','decor']
+const CATEGORIES = ['all','sofa','chair','table','bed','storage','lighting','kitchen','bathroom','decor']
 
 const DEMO_ITEMS = [
   // { id: 'demo1', name: 'Milano Sofa',       category: 'sofa',    width: 220, depth: 90,  rating: 4.8, reviews: 124, image: null, colors: ['#c8a878','#4a4a6a','#8b5e3c'] },
@@ -94,6 +93,7 @@ const CategoryIcon = ({ cat, size = 16 }) => {
         </svg>
       )
     case 'light':
+    case 'lighting':
       return (
         <svg {...props}>
           <path d="M12 4a5 5 0 0 0-3.5 8.6c.8.7 1.2 1.4 1.2 2.3h4.6c0-.9.4-1.6 1.2-2.3A5 5 0 0 0 12 4z" />
@@ -143,7 +143,7 @@ const StarRating = ({ rating }) => {
 
 export default function FurnitureCatalogPage() {
   const navigate = useNavigate()
-  const [assets,       setAssets]       = useState({ furniture: [], textures: [] })
+  const [furniture,    setFurniture]    = useState([])
   const [activeCat,    setActiveCat]    = useState('all')
   const [search,       setSearch]       = useState('')
   const [sort,         setSort]         = useState('popular')
@@ -152,13 +152,28 @@ export default function FurnitureCatalogPage() {
   const [selectedItem, setSelectedItem] = useState(null)
 
   useEffect(() => {
-    setAssets(getAdminAssets())
-    const onFocus = () => setAssets(getAdminAssets())
+    const loadFurniture = async () => {
+      try {
+        const res = await furnitureService.getAll({ limit: 500 })
+        const mapped = (res.data || []).map((item) => ({
+          ...item,
+          id: item._id,
+          image: item.imageUrl,
+          isReal: true,
+        }))
+        setFurniture(mapped)
+      } catch {
+        setFurniture([])
+      }
+    }
+
+    loadFurniture()
+    const onFocus = () => loadFurniture()
     window.addEventListener('focus', onFocus)
     return () => window.removeEventListener('focus', onFocus)
   }, [])
 
-  const allItems = [...assets.furniture.map(f => ({ ...f, isReal: true })), ...DEMO_ITEMS]
+  const allItems = [...furniture, ...DEMO_ITEMS]
 
   const filtered = allItems
     .filter(item =>
