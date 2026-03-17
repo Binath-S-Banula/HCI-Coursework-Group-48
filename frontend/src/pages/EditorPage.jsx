@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
+import { Armchair, ArrowLeft, Grid3X3, Loader2, Minus, Plus, Save } from 'lucide-react'
 import { setMode, toggleGrid, setZoom } from '../store/slices/editorSlice'
 import Canvas2D from '../components/editor/Canvas2D'
 import Canvas3D from '../components/editor/Canvas3D'
@@ -184,13 +185,13 @@ export default function EditorPage() {
           <button
             onClick={() => setFurnitureOpen(!furnitureOpen)}
             className={`editor-topbar-btn${furnitureOpen ? ' editor-topbar-btn--active' : ''}`}>
-            🪑 Furniture
+            <Armchair size={14} /> Furniture
           </button>
           <button onClick={() => doSave(false)} className="editor-topbar-btn editor-topbar-btn--save">
-            {isSaving ? '⏳ Saving…' : '💾 Save'}
+            {isSaving ? <><Loader2 size={14} className="editor-spin" /> Saving…</> : <><Save size={14} /> Save</>}
           </button>
           <button onClick={() => { doSave(true); navigate('/dashboard') }} className="editor-topbar-btn">
-            ← Dashboard
+            <ArrowLeft size={14} /> Dashboard
           </button>
         </div>
       </div>
@@ -218,16 +219,16 @@ export default function EditorPage() {
           {/* Zoom controls — 2D only */}
           {mode === '2d' && (
             <div className="editor-zoom-controls">
-              <button className="editor-zoom-btn" onClick={() => dispatch(setZoom(Math.max(0.1, zoom - 0.1)))}>−</button>
+              <button className="editor-zoom-btn" onClick={() => dispatch(setZoom(Math.max(0.1, zoom - 0.1)))}><Minus size={14} /></button>
               <span className="editor-zoom-label">{Math.round(zoom * 100)}%</span>
-              <button className="editor-zoom-btn" onClick={() => dispatch(setZoom(zoom + 0.1))}>+</button>
+              <button className="editor-zoom-btn" onClick={() => dispatch(setZoom(zoom + 0.1))}><Plus size={14} /></button>
             </div>
           )}
 
           {/* Grid toggle — 2D only */}
           {mode === '2d' && (
             <div className="editor-grid-toggle">
-              <button className="editor-topbar-btn" onClick={() => dispatch(toggleGrid())}>⊞ Grid</button>
+              <button className="editor-topbar-btn" onClick={() => dispatch(toggleGrid())}><Grid3X3 size={14} /> Grid</button>
             </div>
           )}
         </div>
