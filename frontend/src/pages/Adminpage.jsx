@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import {
@@ -12,10 +12,9 @@ import {
   LogOut,
 } from 'lucide-react'
 import { logout } from '../store/slices/authSlice'
+import { furnitureService } from '../services/furniture.service'
 import '../styles/pages/AdminPage.css'
 
-const getStore = () => JSON.parse(localStorage.getItem('adminAssets') || '{"furniture":[],"textures":[]}')
-const saveStore = (data) => localStorage.setItem('adminAssets', JSON.stringify(data))
 const CATS = ['sofa','chair','table','bed','storage','lighting','kitchen','bathroom','decor']
 const NAV = [
   { id:'dashboard', icon: Grid3X3, label:'Dashboard' },
@@ -36,12 +35,19 @@ export default function AdminPage() {
   const dispatch = useDispatch()
   const { user } = useSelector((s) => s.auth)
   const [page,    setPage]    = useState('dashboard')
-  const [store,   setStore]   = useState(getStore)
+  const [store,   setStore]   = useState({ furniture: [] })
   const [form,    setForm]    = useState({ name:'', category:'sofa', price:'', width:'', depth:'' })
   const [preview, setPreview] = useState(null)
+  const [imageFile, setImageFile] = useState(null)
   const [model3d, setModel3d] = useState(null)   // base64 GLB/GLTF
   const [model3dName, setModel3dName] = useState('')
   const [msg,     setMsg]     = useState(null)
+
+  const mapFurniture = (item) => ({
+    ...item,
+    id: item._id || item.id,
+    image: item.imageUrl || item.image,
+  })
 
   const flash = (text, type = 'success') => {
     setMsg({ text, type })
@@ -49,25 +55,58 @@ export default function AdminPage() {
   }
   const readFile = (file, cb) => { const r = new FileReader(); r.onload = (e) => cb(e.target.result); r.readAsDataURL(file) }
 
-  const addFurniture = () => {
-    if (!preview)    return flash('Please upload a 2D furniture image', 'error')
+  const loadFurniture = async () => {
+    try {
+      const res = await furnitureService.getAll({ limit: 200 })
+      const items = Array.isArray(res.data) ? res.data.map(mapFurniture) : []
+      setStore({ furniture: items })
+    } catch {
+      flash('Failed to load furniture', 'error')
+    }
+  }
+
+  useEffect(() => {
+    loadFurniture()
+  }, [])
+
+  const addFurniture = async () => {
+    if (!imageFile)  return flash('Please upload a 2D furniture image', 'error')
     if (!model3d)    return flash('Please upload a 3D model (.glb or .gltf)', 'error')
     if (!form.name)  return flash('Please enter a furniture name', 'error')
-    const item = {
-      id:`f_${Date.now()}`, ...form,
-      price:+form.price||0, width:+form.width||80, depth:+form.depth||80,
-      image:preview,
-      model3d: model3d,
-      model3dName: model3dName,
-      addedAt:new Date().toISOString()
+
+    try {
+      const payload = new FormData()
+      payload.append('name', form.name)
+      payload.append('category', form.category)
+      payload.append('price', String(+form.price || 0))
+      payload.append('width', String(+form.width || 80))
+      payload.append('depth', String(+form.depth || 80))
+      payload.append('image', imageFile)
+      payload.append('model3d', model3d)
+      payload.append('model3dName', model3dName)
+
+      const created = await furnitureService.create(payload)
+      const item = mapFurniture(created)
+      setStore((prev) => ({ ...prev, furniture: [item, ...prev.furniture] }))
+      setPreview(null)
+      setImageFile(null)
+      setModel3d(null)
+      setModel3dName('')
+      setForm({ name:'', category:'sofa', price:'', width:'', depth:'' })
+      flash('Furniture added successfully')
+    } catch {
+      flash('Failed to add furniture', 'error')
     }
-    const next = { ...store, furniture:[item,...store.furniture] }
-    saveStore(next); setStore(next)
-    setPreview(null); setModel3d(null); setModel3dName('')
-    setForm({ name:'', category:'sofa', price:'', width:'', depth:'' })
-    flash('Furniture added successfully')
   }
-  const del = (section, id) => { const next = { ...store, [section]:store[section].filter(i=>i.id!==id) }; saveStore(next); setStore(next) }
+
+  const del = async (id) => {
+    try {
+      await furnitureService.delete(id)
+      setStore((prev) => ({ ...prev, furniture: prev.furniture.filter((i) => i.id !== id) }))
+    } catch {
+      flash('Failed to remove furniture', 'error')
+    }
+  }
   const handleLogout = () => { dispatch(logout()); navigate('/admin/login') }
 
   const Flash = () => !msg ? null : (
@@ -78,13 +117,13 @@ export default function AdminPage() {
     <div>
       <label className={`admin-upload-box ${preview ? 'admin-upload-box--filled' : ''}`}>
         {preview ? <img src={preview} alt="preview" /> : <><span className="admin-upload-box__icon">{icon}</span><span className="admin-upload-box__label">{label}</span></>}
-        <input type="file" accept="image/*" style={{ display:'none' }} onChange={e => { const f=e.target.files?.[0]; if(f) readFile(f,onFile); e.target.value='' }} />
+        <input type="file" accept="image/*" style={{ display:'none' }} onChange={e => { const f=e.target.files?.[0]; if(f) onFile(f); e.target.value='' }} />
       </label>
       {preview && <button className="admin-upload-clear" onClick={onClear}><X size={12} /> Remove</button>}
     </div>
   )
 
-  const ItemCard = ({ item, section }) => (
+  const ItemCard = ({ item }) => (
     <div className="admin-item-card">
       <img src={item.image} alt={item.name} />
       <div className="admin-item-card__body">
@@ -94,7 +133,7 @@ export default function AdminPage() {
           {item.model3d && <span style={{ marginLeft:6, fontSize:'0.6rem', background:'rgba(67,217,173,0.2)', color:'#43d9ad', padding:'1px 5px', borderRadius:4, fontWeight:700 }}>3D</span>}
         </div>
       </div>
-      <button className="admin-item-card__delete" onClick={() => del(section, item.id)}><X size={10} /></button>
+      <button className="admin-item-card__delete" onClick={() => del(item.id)}><X size={10} /></button>
     </div>
   )
 
@@ -148,7 +187,19 @@ export default function AdminPage() {
               <span style={{ width:16, height:16, borderRadius:'50%', background: preview ? '#43d9ad' : 'rgba(108,99,255,0.5)', display:'inline-flex', alignItems:'center', justifyContent:'center', fontSize:9, color:'#fff', flexShrink:0 }}>{preview ? <CheckCircle2 size={10} /> : '1'}</span>
               2D Image (required)
             </div>
-            <UploadBox preview={preview} onFile={setPreview} onClear={() => setPreview(null)} icon={<Image size={28} />} label="Upload furniture image (.png / .jpg)" />
+            <UploadBox
+              preview={preview}
+              onFile={(file) => {
+                setImageFile(file)
+                readFile(file, setPreview)
+              }}
+              onClear={() => {
+                setPreview(null)
+                setImageFile(null)
+              }}
+              icon={<Image size={28} />}
+              label="Upload furniture image (.png / .jpg)"
+            />
           </div>
 
           {/* Step 2 — 3D Model */}
@@ -211,7 +262,7 @@ export default function AdminPage() {
           <div className="admin-item-count">{store.furniture.length} items in catalog</div>
           {store.furniture.length === 0
             ? <div className="admin-empty">No furniture added yet</div>
-            : <div className="admin-items-grid">{store.furniture.map(item => <ItemCard key={item.id} item={item} section="furniture" />)}</div>
+            : <div className="admin-items-grid">{store.furniture.map(item => <ItemCard key={item.id} item={item} />)}</div>
           }
         </div>
       </div>
@@ -236,14 +287,14 @@ export default function AdminPage() {
           <div className="admin-sidebar__section-label">Menu</div>
           {NAV.map(item => {
             const active = page === item.id
-            const count = item.id==='furniture' ? store.furniture.length : item.id==='textures' ? store.textures.length : null
+            const count = item.id==='furniture' ? store.furniture.length : null
             return (
               <button key={item.id} onClick={() => setPage(item.id)}
                 className={`admin-nav-btn ${active ? 'admin-nav-btn--active' : 'admin-nav-btn--inactive'}`}>
                 <span className="admin-nav-btn__icon"><item.icon size={16} /></span>
                 <span className="admin-nav-btn__label">{item.label}</span>
                 {count > 0 && (
-                  <span className={`admin-nav-btn__badge ${item.id==='textures' ? 'admin-nav-btn__badge--teal' : 'admin-nav-btn__badge--purple'}`}>{count}</span>
+                  <span className="admin-nav-btn__badge admin-nav-btn__badge--purple">{count}</span>
                 )}
               </button>
             )
