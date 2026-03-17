@@ -151,7 +151,6 @@ export default function DashboardPage() {
             <h1 className="dashboard__title">My Projects</h1>
             <p className="dashboard__subtitle">Welcome back, {user?.name || 'Designer'} <Waves size={14} strokeWidth={2} /></p>
           </div>
-          <button className="dashboard__new-btn" onClick={handleCreate}><Plus size={16} strokeWidth={2.2} /> New Project</button>
         </div>
 
         {/* Plan badge */}
