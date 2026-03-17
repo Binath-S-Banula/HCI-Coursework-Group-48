@@ -1,10 +1,11 @@
 import { useDispatch, useSelector } from 'react-redux'
-import { AppWindow, DoorOpen, Minus, MousePointer2, Redo2, Undo2 } from 'lucide-react'
+import { AppWindow, DoorOpen, Minus, MousePointer2, Redo2, Square, Undo2 } from 'lucide-react'
 import { setTool } from '../../store/slices/editorSlice'
 
 const tools = [
   { id: 'select',  icon: MousePointer2, label: 'Select',  key: 'V' },
   { id: 'wall',    icon: Minus,         label: 'Wall',    key: 'W' },
+  { id: 'floor',   icon: Square,        label: 'Floor',   key: 'F' },
   { id: 'door',    icon: DoorOpen,      label: 'Door',    key: 'D' },
   { id: 'window',  icon: AppWindow,     label: 'Window',  key: 'N' },
 ]
