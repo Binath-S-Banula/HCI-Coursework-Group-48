@@ -14,6 +14,8 @@ const placedItemSchema = new mongoose.Schema({
   cat:      String,
   x: Number, y: Number,
   w: Number, h: Number,
+  angle: Number,
+  color: String,
   width: Number, depth: Number,
   model3d: String,
   model3dName: String,
@@ -48,6 +50,12 @@ const projectSchema = new mongoose.Schema({
     image: { type: String, default: null },
   },
   wallColor: { type: String, default: '#e8e2d8' },
+  lightIntensity: { type: Number, default: 1 },
+  timeOfDay: {
+    type: String,
+    enum: ['morning', 'day', 'evening', 'night'],
+    default: 'day',
+  },
 
   // Settings
   settings: {
