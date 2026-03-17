@@ -4,16 +4,12 @@ import { useDispatch, useSelector } from 'react-redux'
 import {
   Grid3X3,
   Box,
-  Paintbrush,
   Image,
-  Upload,
   CheckCircle2,
   Circle,
   X,
   Settings,
   LogOut,
-  Square,
-  LayoutGrid,
 } from 'lucide-react'
 import { logout } from '../store/slices/authSlice'
 import '../styles/pages/AdminPage.css'
@@ -24,7 +20,6 @@ const CATS = ['sofa','chair','table','bed','storage','lighting','kitchen','bathr
 const NAV = [
   { id:'dashboard', icon: Grid3X3, label:'Dashboard' },
   { id:'furniture', icon: Box, label:'Furniture' },
-  { id:'textures',  icon: Paintbrush, label:'Textures'  },
 ]
 
 function Field({ label, field, placeholder, type='text', obj, setObj }) {
@@ -43,11 +38,9 @@ export default function AdminPage() {
   const [page,    setPage]    = useState('dashboard')
   const [store,   setStore]   = useState(getStore)
   const [form,    setForm]    = useState({ name:'', category:'sofa', price:'', width:'', depth:'' })
-  const [texForm, setTexForm] = useState({ name:'', type:'wall' })
   const [preview, setPreview] = useState(null)
   const [model3d, setModel3d] = useState(null)   // base64 GLB/GLTF
   const [model3dName, setModel3dName] = useState('')
-  const [texPrev, setTexPrev] = useState(null)
   const [msg,     setMsg]     = useState(null)
 
   const flash = (text, type = 'success') => {
@@ -74,14 +67,6 @@ export default function AdminPage() {
     setForm({ name:'', category:'sofa', price:'', width:'', depth:'' })
     flash('Furniture added successfully')
   }
-  const addTexture = () => {
-    if (!texPrev || !texForm.name) return flash('Please add a name and image', 'error')
-    const item = { id:`t_${Date.now()}`, ...texForm, image:texPrev, addedAt:new Date().toISOString() }
-    const next = { ...store, textures:[item,...store.textures] }
-    saveStore(next); setStore(next)
-    setTexPrev(null); setTexForm({ name:'', type:'wall' })
-    flash('Texture added successfully')
-  }
   const del = (section, id) => { const next = { ...store, [section]:store[section].filter(i=>i.id!==id) }; saveStore(next); setStore(next) }
   const handleLogout = () => { dispatch(logout()); navigate('/admin/login') }
 
@@ -99,13 +84,13 @@ export default function AdminPage() {
     </div>
   )
 
-  const ItemCard = ({ item, section, isTexture }) => (
+  const ItemCard = ({ item, section }) => (
     <div className="admin-item-card">
-      <img src={item.image} alt={item.name} className={isTexture ? 'admin-item-card--texture' : ''} />
+      <img src={item.image} alt={item.name} />
       <div className="admin-item-card__body">
         <div className="admin-item-card__name">{item.name}</div>
         <div className="admin-item-card__meta">
-          {isTexture ? (item.type==='wall' ? 'Wall' : 'Floor') : `${item.category}`}
+          {item.category}
           {item.model3d && <span style={{ marginLeft:6, fontSize:'0.6rem', background:'rgba(67,217,173,0.2)', color:'#43d9ad', padding:'1px 5px', borderRadius:4, fontWeight:700 }}>3D</span>}
         </div>
       </div>
@@ -121,9 +106,6 @@ export default function AdminPage() {
       <div className="admin-stats">
         {[
           { label:'Furniture',     value:store.furniture.length,                           icon: Box,       cls:'text-accent' },
-          { label:'Textures',      value:store.textures.length,                            icon: Paintbrush,cls:'text-teal'   },
-          { label:'Wall Textures', value:store.textures.filter(t=>t.type==='wall').length, icon: Square,    cls:'text-orange' },
-          { label:'Floor Textures',value:store.textures.filter(t=>t.type==='floor').length,icon: LayoutGrid,cls:'text-blue'   },
         ].map(s => (
           <div key={s.label} className="admin-stat-card">
             <div className="admin-stat-card__icon"><s.icon size={22} /></div>
@@ -144,23 +126,6 @@ export default function AdminPage() {
               <div key={item.id} className="admin-mini-card">
                 <img src={item.image} alt={item.name} />
                 <div className="admin-mini-card__label">{item.name}</div>
-              </div>
-            ))}</div>
-        }
-      </div>
-
-      <div>
-        <div className="admin-section-header">
-          <span className="admin-section-title">Recent Textures</span>
-          <button className="admin-section-link admin-section-link--teal" onClick={() => setPage('textures')}>View all →</button>
-        </div>
-        {store.textures.length === 0
-          ? <div className="admin-empty">No textures yet — <button className="admin-section-link admin-section-link--teal" onClick={() => setPage('textures')}>Add some →</button></div>
-          : <div className="admin-mini-grid">{store.textures.slice(0,8).map(item => (
-              <div key={item.id} className="admin-mini-card admin-mini-card--texture">
-                <img src={item.image} alt={item.name} />
-                <div className="admin-mini-card__label">{item.name}</div>
-                <div className="admin-mini-card__sublabel">{item.type==='wall' ? 'Wall' : 'Floor'}</div>
               </div>
             ))}</div>
         }
@@ -246,37 +211,7 @@ export default function AdminPage() {
           <div className="admin-item-count">{store.furniture.length} items in catalog</div>
           {store.furniture.length === 0
             ? <div className="admin-empty">No furniture added yet</div>
-            : <div className="admin-items-grid">{store.furniture.map(item => <ItemCard key={item.id} item={item} section="furniture" isTexture={false} />)}</div>
-          }
-        </div>
-      </div>
-    </div>
-  )
-
-  // ── Textures ───────────────────────────────────────────────────
-  const TexturesView = () => (
-    <div>
-      <h2 style={{ fontFamily:'Syne,sans-serif', fontWeight:900, fontSize:'1.375rem', marginBottom:'1.5rem' }}>Texture Library</h2>
-      <Flash />
-      <div className="admin-page-grid">
-        <div className="admin-form-card">
-          <h3>+ Add Texture</h3>
-          <UploadBox preview={texPrev} onFile={setTexPrev} onClear={() => setTexPrev(null)} icon={<Upload size={28} />} label="Upload texture image" />
-          <Field label="Name *" field="name" placeholder="e.g. Marble Floor" obj={texForm} setObj={setTexForm} />
-          <div className="admin-field">
-            <label>Apply To</label>
-            <div className="admin-type-toggle">
-              <button className={`admin-type-btn ${texForm.type==='wall' ? 'admin-type-btn--wall-active' : 'admin-type-btn--wall-inactive'}`} onClick={() => setTexForm(p=>({...p,type:'wall'}))}><Square size={14} /> Wall</button>
-              <button className={`admin-type-btn ${texForm.type==='floor' ? 'admin-type-btn--floor-active' : 'admin-type-btn--floor-inactive'}`} onClick={() => setTexForm(p=>({...p,type:'floor'}))}><LayoutGrid size={14} /> Floor</button>
-            </div>
-          </div>
-          <button className="admin-submit-teal" onClick={addTexture}>Add Texture</button>
-        </div>
-        <div>
-          <div className="admin-item-count">{store.textures.length} textures in library</div>
-          {store.textures.length === 0
-            ? <div className="admin-empty">No textures added yet</div>
-            : <div className="admin-items-grid">{store.textures.map(item => <ItemCard key={item.id} item={item} section="textures" isTexture={true} />)}</div>
+            : <div className="admin-items-grid">{store.furniture.map(item => <ItemCard key={item.id} item={item} section="furniture" />)}</div>
           }
         </div>
       </div>
@@ -334,13 +269,11 @@ export default function AdminPage() {
           <div className="admin-topbar__sub">
             {page==='dashboard' && 'Overview of your catalog'}
             {page==='furniture' && 'Manage furniture items for clients'}
-            {page==='textures'  && 'Manage wall and floor textures'}
           </div>
         </header>
         <main className="admin-content">
           {page==='dashboard' && DashboardView()}
           {page==='furniture' && FurnitureView()}
-          {page==='textures'  && TexturesView()}
         </main>
       </div>
     </div>
