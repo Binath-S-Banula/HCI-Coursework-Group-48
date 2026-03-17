@@ -41,6 +41,55 @@
   white-space: nowrap;
 }
 
+.canvas3d-lighting {
+  position: absolute;
+  top: 12px;
+  left: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  background: rgba(19, 19, 31, 0.72);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  backdrop-filter: blur(4px);
+}
+.canvas3d-lighting__label {
+  font-size: 11px;
+  color: rgba(255,255,255,0.8);
+  font-weight: 600;
+  width: 100%;
+}
+.canvas3d-lighting__presets {
+  display: flex;
+  gap: 6px;
+}
+.canvas3d-lighting__preset-btn {
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.78);
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+.canvas3d-lighting__preset-btn--active {
+  border-color: rgba(108,99,255,0.45);
+  background: rgba(108,99,255,0.28);
+  color: #f0eeff;
+}
+.canvas3d-lighting__slider {
+  width: 130px;
+}
+.canvas3d-lighting__value {
+  font-size: 11px;
+  color: #d2d7ee;
+  min-width: 36px;
+  text-align: right;
+}
+
 /* ── Status badges ────────────────────────────────────────────────── */
 .canvas3d-status {
   position: absolute; top: 12px; right: 14px;
