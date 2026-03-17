@@ -2,14 +2,8 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 import toast from 'react-hot-toast'
+import { projectService } from '../services/project.service'
 import '../styles/pages/DashboardPage.css'
-
-// ── Local storage helpers ─────────────────────────────────────────────
-const LS_KEY = 'homeplan3d_projects'
-const loadProjects  = () => { try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]') } catch { return [] } }
-const saveProjects  = (list) => localStorage.setItem(LS_KEY, JSON.stringify(list))
-
-function genId() { return 'proj_' + Date.now() + '_' + Math.random().toString(36).slice(2,7) }
 
 // ── Sub-components ────────────────────────────────────────────────────
 function ProjectCard({ project, onEdit, onDelete, onRename }) {
@@ -53,10 +47,10 @@ function ProjectCard({ project, onEdit, onDelete, onRename }) {
         </div>
         <div className="project-card__tags">
           <span className="project-card__tag project-card__tag--purple">
-            {project.wallCount || 0} walls
+            {(project.walls || []).length} walls
           </span>
           <span className="project-card__tag project-card__tag--teal">
-            {project.furnitureCount || 0} items
+            {(project.placed || []).length} items
           </span>
         </div>
       </div>
@@ -88,64 +82,66 @@ export default function DashboardPage() {
   const [loading,  setLoading]  = useState(true)
   const [deleting, setDeleting] = useState(null)
 
-  // Load projects from localStorage on mount
-  useEffect(() => {
+  const loadProjects = async () => {
     setLoading(true)
-    const list = loadProjects()
-    setProjects(list)
-    setLoading(false)
+    try {
+      const list = await projectService.getAll()
+      setProjects(list)
+    } catch {
+      toast.error('Failed to load projects')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Load projects from API on mount
+  useEffect(() => {
+    loadProjects()
   }, [])
 
-  // Re-sync when the window gains focus (in case editor saved while page was open)
+  // Re-sync when the window gains focus
   useEffect(() => {
-    const onFocus = () => setProjects(loadProjects())
+    const onFocus = () => loadProjects()
     window.addEventListener('focus', onFocus)
     return () => window.removeEventListener('focus', onFocus)
   }, [])
 
-  const handleCreate = () => {
-    const newProject = {
-      id:             genId(),
-      name:           'New Project',
-      createdAt:      new Date().toISOString(),
-      updatedAt:      new Date().toISOString(),
-      thumbnail:      null,
-      wallCount:      0,
-      furnitureCount: 0,
-      // canvas state — editor will populate these
-      walls:          [],
-      placed:         [],
-      openings:       [],
-      floorTex:       null,
-      wallTex:        null,
+  const handleCreate = async () => {
+    try {
+      const newProject = await projectService.create({ name: 'New Project' })
+      setProjects((prev) => [newProject, ...prev])
+      navigate(`/editor/${newProject._id}`)
+    } catch {
+      toast.error('Failed to create project')
     }
-    const updated = [newProject, ...projects]
-    saveProjects(updated)
-    setProjects(updated)
-    navigate(`/editor/${newProject.id}`)
   }
 
   const handleDelete = (id) => {
     setDeleting(id)
-    setTimeout(() => {
-      const updated = projects.filter(p => p.id !== id)
-      saveProjects(updated)
-      setProjects(updated)
-      setDeleting(null)
-      toast.success('Project deleted')
+    setTimeout(async () => {
+      try {
+        await projectService.delete(id)
+        setProjects((prev) => prev.filter(p => p._id !== id))
+        toast.success('Project deleted')
+      } catch {
+        toast.error('Failed to delete project')
+      } finally {
+        setDeleting(null)
+      }
     }, 300)
   }
 
-  const handleRename = (id, newName) => {
-    const updated = projects.map(p =>
-      p.id === id ? { ...p, name: newName, updatedAt: new Date().toISOString() } : p
-    )
-    saveProjects(updated)
-    setProjects(updated)
+  const handleRename = async (id, newName) => {
+    try {
+      const updatedProject = await projectService.update(id, { name: newName })
+      setProjects((prev) => prev.map(p => (p._id === id ? updatedProject : p)))
+    } catch {
+      toast.error('Failed to rename project')
+    }
   }
 
   const handleEdit = (project) => {
-    navigate(`/editor/${project.id}`)
+    navigate(`/editor/${project._id}`)
   }
 
   return (
@@ -190,12 +186,12 @@ export default function DashboardPage() {
             </button>
 
             {projects.map(p => (
-              <div key={p.id} style={{ opacity: deleting === p.id ? 0.4 : 1, transition: 'opacity 0.3s' }}>
+              <div key={p._id} style={{ opacity: deleting === p._id ? 0.4 : 1, transition: 'opacity 0.3s' }}>
                 <ProjectCard
                   project={p}
                   onEdit={() => handleEdit(p)}
-                  onDelete={() => handleDelete(p.id)}
-                  onRename={(name) => handleRename(p.id, name)}
+                  onDelete={() => handleDelete(p._id)}
+                  onRename={(name) => handleRename(p._id, name)}
                 />
               </div>
             ))}
