@@ -123,6 +123,8 @@
 }
 .project-card__action--edit { background: rgba(108,99,255,0.15); color: #a78bfa; }
 .project-card__action--edit:hover { background: rgba(108,99,255,0.25); }
+.project-card__action--rename { background: rgba(96,165,250,0.12); color: #60a5fa; }
+.project-card__action--rename:hover { background: rgba(96,165,250,0.2); }
 .project-card__action--share { background: rgba(67,217,173,0.12); color: #43d9ad; }
 .project-card__action--share:hover { background: rgba(67,217,173,0.2); }
 .project-card__action--unshare { background: rgba(255,255,255,0.08); color: #9ca3af; }
