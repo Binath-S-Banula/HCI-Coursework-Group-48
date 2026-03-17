@@ -21,7 +21,9 @@ const adminOnly = async (req, res, next) => {
   try {
     const User = require('../models/User')
     const user = await User.findById(req.userId)
-    if (!user || user.role !== 'admin')
+    if (!user)
+      return res.status(401).json({ success:false, message:'User session is invalid. Please sign in again.' })
+    if (user.role !== 'admin')
       return res.status(403).json({ success:false, message:'Admin access required' })
     next()
   } catch (err) { next(err) }
