@@ -98,8 +98,7 @@ export default function FurnitureCatalogPage() {
             Browse {allItems.length}+ curated furniture items. Add them directly to your floor plan and visualize in 3D.
           </p>
           <div className="catalog-hero__actions">
-            <button className="catalog-hero__btn-primary" onClick={() => navigate('/editor')}>Open Editor</button>
-            <button className="catalog-hero__btn-secondary" onClick={() => navigate('/admin')}>+ Add Furniture</button>
+            <button className="catalog-hero__btn-primary" onClick={() => navigate('/dashboard')}>Open Editor</button>
           </div>
         </div>
       </div>
