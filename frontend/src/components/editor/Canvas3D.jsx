@@ -576,6 +576,11 @@ function base64ToBlobUrl(base64) {
   }
 }
 
+function resolveModelUrl(model3d) {
+  if (!model3d || typeof model3d !== 'string') return null
+  return model3d.startsWith('data:') ? base64ToBlobUrl(model3d) : model3d
+}
+
 function CustomModel({ url, w, d }) {
   const { scene } = useGLTF(url)
   // Auto-scale model to fit the furniture footprint (w × d)
@@ -604,8 +609,8 @@ function FurnitureItem3D({ item, cx, cz }) {
   const d   = Math.max((item.h || 80) * SCALE, 0.3)
   const cat = (item.cat || item.category || item.name || '').toLowerCase()
 
-  // If admin uploaded a custom 3D model (base64 GLB) — use it
-  const blobUrl = item.model3d ? base64ToBlobUrl(item.model3d) : null
+  // Support both old base64 models and uploaded model URLs
+  const modelUrl = resolveModelUrl(item.model3d)
 
   const fallback = (() => {
     if (cat.includes('bed'))                                                          return <Bed3D w={w} d={d} />
@@ -620,9 +625,9 @@ function FurnitureItem3D({ item, cx, cz }) {
     return <GenericFurniture3D w={w} d={d} />
   })()
 
-  const model = blobUrl ? (
+  const model = modelUrl ? (
     <Suspense fallback={fallback}>
-      <CustomModel url={blobUrl} w={w} d={d} />
+      <CustomModel url={modelUrl} w={w} d={d} />
     </Suspense>
   ) : fallback
 
