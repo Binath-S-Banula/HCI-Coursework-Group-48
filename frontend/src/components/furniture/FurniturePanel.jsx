@@ -2,6 +2,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { setCategory } from '../../store/slices/furnitureSlice'
 import { furnitureService } from '../../services/furniture.service'
+import { Armchair } from 'lucide-react'
 
 const CATS = [
   { id: 'sofa',     label: 'Sofa'    },
@@ -42,8 +43,8 @@ function FurnitureCard({ item, dispatch_drag }) {
       onDragStart={e => {
         e.dataTransfer.setData('furniture', JSON.stringify(item))
         const ghost = document.createElement('div')
-        ghost.style.cssText = 'position:fixed;top:-999px;left:-999px;width:50px;height:50px;background:#6c63ff;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:22px;'
-        ghost.textContent = '🪑'
+        ghost.style.cssText = 'position:fixed;top:-999px;left:-999px;width:50px;height:50px;background:#6c63ff;border-radius:8px;display:flex;align-items:center;justify-content:center;'
+        ghost.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11V8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3"/><rect x="4" y="11" width="16" height="5" rx="1"/><path d="M6 16v2M18 16v2"/></svg>'
         document.body.appendChild(ghost)
         e.dataTransfer.setDragImage(ghost, 25, 25)
         setTimeout(() => document.body.removeChild(ghost), 0)
@@ -102,8 +103,6 @@ export default function FurniturePanel() {
   const dispatch = useDispatch()
   const { activeCategory } = useSelector(s => s.furniture)
   const [items, setItems] = useState([])
-  const [search,   setSearch]   = useState('')
-  const [viewMode, setViewMode] = useState('blueprint')
   const [width,    setWidth]    = useState(260)
   const isResizing = useRef(false)
   const startX     = useRef(0)
@@ -153,8 +152,7 @@ export default function FurniturePanel() {
 
   const allItems = [...items, ...ITEMS]
   const filtered  = allItems.filter(f =>
-    (activeCategory ? f.cat === activeCategory : f.cat === 'sofa') &&
-    (!search || f.name.toLowerCase().includes(search.toLowerCase()))
+    (activeCategory ? f.cat === activeCategory : f.cat === 'sofa')
   )
 
   return (
@@ -170,24 +168,9 @@ export default function FurniturePanel() {
 
       {/* Header */}
       <div style={{ padding: '12px 14px 10px', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
-        <div style={{ fontWeight: 800, fontSize: 13, fontFamily: 'Syne,sans-serif', color: '#e8e8f0', marginBottom: 10 }}>🪑 Furniture</div>
-        <div style={{ display: 'flex', marginBottom: 10 }}>
-          {[['blueprint','Blueprint'],['textures','Textures']].map(([v, l]) => (
-            <button key={v} onClick={() => setViewMode(v)} style={{
-              flex: 1, padding: '5px 0', fontSize: 11, fontWeight: 600, cursor: 'pointer',
-              background: viewMode === v ? 'rgba(108,99,255,0.2)' : 'rgba(255,255,255,0.03)',
-              border: viewMode === v ? '1px solid rgba(108,99,255,0.45)' : '1px solid rgba(255,255,255,0.07)',
-              color: viewMode === v ? '#9b95ff' : '#666',
-              borderRadius: v === 'blueprint' ? '7px 0 0 7px' : '0 7px 7px 0',
-            }}>{l}</button>
-          ))}
+        <div style={{ fontWeight: 800, fontSize: 13, fontFamily: 'Syne,sans-serif', color: '#e8e8f0', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <Armchair size={14} /> Furniture
         </div>
-        <input
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Search furniture..."
-          style={{ width: '100%', padding: '7px 10px', borderRadius: 7, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#e8e8f0', fontSize: 11, outline: 'none', boxSizing: 'border-box' }}
-        />
       </div>
 
       {/* Category pills */}
