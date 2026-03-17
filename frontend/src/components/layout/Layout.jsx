@@ -3,6 +3,7 @@ import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { logout } from '../../store/slices/authSlice'
 import { projectService } from '../../services/project.service'
+import logoImage from '../../uploads/homeland-logo.png'
 import '../../styles/components/Layout.css'
 
 export default function Layout() {
@@ -35,8 +36,7 @@ export default function Layout() {
 
             {/* Logo */}
             <Link to="/" className="navbar__logo">
-              <div className="navbar__logo-icon">H</div>
-              <span className="navbar__logo-name">HomePlan3D</span>
+              <img src={logoImage} alt="HomePlan3D Logo" className="navbar__logo-image" />
             </Link>
 
             {/* Links */}
@@ -90,8 +90,7 @@ export default function Layout() {
         <footer className="footer">
           <div className="footer__inner">
             <Link to="/" className="footer__brand">
-              <div className="footer__brand-icon">H</div>
-              <span className="footer__brand-name">HomePlan3D</span>
+              <img src={logoImage} alt="HomePlan3D Logo" className="footer__brand-image" />
             </Link>
             <span className="footer__copy">©️ {new Date().getFullYear()} HomePlan3D. All rights reserved.</span>
           </div>

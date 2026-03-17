@@ -17,6 +17,14 @@
   display: flex; align-items: center; gap: 0.625rem;
   text-decoration: none; color: inherit;
 }
+.navbar__logo-image {
+  height: 8.75rem; width: auto;
+  object-fit: contain; flex-shrink: 0;
+  transition: transform 0.2s;
+}
+.navbar__logo:hover .navbar__logo-image {
+  transform: scale(1.05);
+}
 .navbar__logo-icon {
   width: 2rem; height: 2rem; border-radius: 0.5rem;
   background: linear-gradient(135deg, #6c63ff, #43d9ad);
@@ -101,6 +109,14 @@
 .footer__brand {
   display: flex; align-items: center; gap: 0.625rem;
   text-decoration: none; color: inherit;
+}
+.footer__brand-image {
+  height: 8.75rem; width: auto;
+  object-fit: contain; flex-shrink: 0;
+  transition: transform 0.2s;
+}
+.footer__brand:hover .footer__brand-image {
+  transform: scale(1.05);
 }
 .footer__brand-icon {
   width: 1.75rem; height: 1.75rem; border-radius: 0.375rem;
