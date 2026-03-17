@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 import toast from 'react-hot-toast'
+import { Home, Pencil, Plus, Sparkles, Trash2, Waves } from 'lucide-react'
 import { projectService } from '../services/project.service'
 import '../styles/pages/DashboardPage.css'
 
@@ -20,12 +21,8 @@ function ProjectCard({ project, onEdit, onDelete, onRename }) {
       <div className="project-card__thumb">
         {project.thumbnail
           ? <img src={project.thumbnail} alt={project.name} />
-          : <span>🏠</span>
+          : <Home size={44} strokeWidth={1.9} />
         }
-        <div className="project-card__overlay">
-          <button className="project-card__overlay-btn project-card__overlay-btn--edit" onClick={onEdit}>Edit</button>
-          <button className="project-card__overlay-btn project-card__overlay-btn--del"  onClick={onDelete}>Delete</button>
-        </div>
       </div>
       <div className="project-card__body">
         {renaming ? (
@@ -55,8 +52,8 @@ function ProjectCard({ project, onEdit, onDelete, onRename }) {
         </div>
       </div>
       <div className="project-card__actions">
-        <button className="project-card__action project-card__action--edit" onClick={onEdit}>✏️ Open</button>
-        <button className="project-card__action project-card__action--delete" onClick={onDelete}>🗑 Delete</button>
+        <button className="project-card__action project-card__action--edit" onClick={onEdit}><Pencil size={13} /> Open</button>
+        <button className="project-card__action project-card__action--delete" onClick={onDelete}><Trash2 size={13} /> Delete</button>
       </div>
     </div>
   )
@@ -152,14 +149,14 @@ export default function DashboardPage() {
         <div className="dashboard__header">
           <div>
             <h1 className="dashboard__title">My Projects</h1>
-            <p className="dashboard__subtitle">Welcome back, {user?.name || 'Designer'} 👋</p>
+            <p className="dashboard__subtitle">Welcome back, {user?.name || 'Designer'} <Waves size={14} strokeWidth={2} /></p>
           </div>
-          <button className="dashboard__new-btn" onClick={handleCreate}>+ New Project</button>
+          <button className="dashboard__new-btn" onClick={handleCreate}><Plus size={16} strokeWidth={2.2} /> New Project</button>
         </div>
 
         {/* Plan badge */}
         <div className={`plan-badge plan-badge--${user?.plan || 'free'}`}>
-          ★ {(user?.plan || 'free').charAt(0).toUpperCase() + (user?.plan || 'free').slice(1)} Plan
+          <Sparkles size={12} strokeWidth={2} /> {(user?.plan || 'free').charAt(0).toUpperCase() + (user?.plan || 'free').slice(1)} Plan
           {(!user?.plan || user?.plan === 'free') && (
             <span style={{ color:'#6b7280', fontWeight:400 }}> — {projects.length} project{projects.length !== 1 ? 's' : ''}</span>
           )}
@@ -172,7 +169,7 @@ export default function DashboardPage() {
           </div>
         ) : projects.length === 0 ? (
           <div className="dashboard-empty">
-            <div className="dashboard-empty__icon">🏠</div>
+            <div className="dashboard-empty__icon"><Home size={58} strokeWidth={1.7} /></div>
             <h3 className="dashboard-empty__title">No projects yet</h3>
             <p className="dashboard-empty__sub">Start designing your dream home today</p>
             <button className="dashboard-empty__btn" onClick={handleCreate}>Create Your First Project</button>
@@ -181,7 +178,7 @@ export default function DashboardPage() {
           <div className="projects-grid">
             {/* New project tile */}
             <button className="project-card project-card--new" onClick={handleCreate}>
-              <span className="project-card--new-icon">+</span>
+              <span className="project-card--new-icon"><Plus size={28} strokeWidth={2.5} /></span>
               <span className="project-card--new-label">New Project</span>
             </button>
 
