@@ -138,7 +138,7 @@ export interface PaginatedResponse<T> {
 
 // ── Editor ────────────────────────────────────────────────────────────────────
 export type EditorMode = '2d' | '3d'
-export type Tool = 'select' | 'wall' | 'door' | 'window' | 'room' | 'measure'
+export type Tool = 'select' | 'wall' | 'floor' | 'door' | 'window' | 'room' | 'measure'
 
 export interface EditorState {
   mode: EditorMode
