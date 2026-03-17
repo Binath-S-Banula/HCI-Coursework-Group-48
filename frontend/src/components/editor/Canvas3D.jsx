@@ -32,10 +32,14 @@ const SCALE       = 0.05
 const WALL_HEIGHT = 2.8
 
 // ── Compute center offset from all walls so room is centered ─────────────────
-function getRoomCenter(walls) {
-  if (!walls.length) return { cx: 0, cz: 0 }
+function getSceneCenter(walls, floor) {
   const xs = walls.flatMap(w => [w.start.x, w.end.x])
   const ys = walls.flatMap(w => [w.start.y, w.end.y])
+  if (floor && floor.w > 0 && floor.h > 0) {
+    xs.push(floor.x, floor.x + floor.w)
+    ys.push(floor.y, floor.y + floor.h)
+  }
+  if (!xs.length || !ys.length) return { cx: 0, cz: 0 }
   return {
     cx: (Math.min(...xs) + Math.max(...xs)) / 2,
     cz: (Math.min(...ys) + Math.max(...ys)) / 2,
@@ -322,30 +326,44 @@ function Wall3D({ wall, wallTexUrl, wallColor, cx, cz, openings }) {
 }
 
 // ── Floor ─────────────────────────────────────────────────────────────────────
-function Floor({ walls, floorTexUrl }) {
+function Floor({ walls, floor, floorTexUrl, floorColor, cx, cz }) {
   const floorTex = floorTexUrl ? useTexture(floorTexUrl) : null
+
+  const hasDrawnFloor = !!(floor && floor.w > 0 && floor.h > 0)
+
+  let planeWidth = 2
+  let planeDepth = 2
+  let planeX = 0
+  let planeZ = 0
+
+  if (hasDrawnFloor) {
+    planeWidth = Math.max(floor.w * SCALE, 0.5)
+    planeDepth = Math.max(floor.h * SCALE, 0.5)
+    planeX = ((floor.x + floor.w / 2) - cx) * SCALE
+    planeZ = ((floor.y + floor.h / 2) - cz) * SCALE
+  } else if (walls.length) {
+    const xs = walls.flatMap(w => [w.start.x, w.end.x])
+    const ys = walls.flatMap(w => [w.start.y, w.end.y])
+    planeWidth = (Math.max(...xs) - Math.min(...xs)) * SCALE + 2
+    planeDepth = (Math.max(...ys) - Math.min(...ys)) * SCALE + 2
+  }
+
   if (floorTex) {
     floorTex.wrapS = THREE.RepeatWrapping
     floorTex.wrapT = THREE.RepeatWrapping
-    floorTex.repeat.set(8, 8)
+    floorTex.repeat.set(Math.max(planeWidth, 1), Math.max(planeDepth, 1))
   }
-
-  // Compute floor size from wall bounding box
-  const xs = walls.flatMap(w => [w.start.x, w.end.x])
-  const ys = walls.flatMap(w => [w.start.y, w.end.y])
-  const W = (Math.max(...xs) - Math.min(...xs)) * SCALE + 2
-  const D = (Math.max(...ys) - Math.min(...ys)) * SCALE + 2
 
   return (
     <Plane
-      args={[Math.max(W, 2), Math.max(D, 2)]}
+      args={[Math.max(planeWidth, 2), Math.max(planeDepth, 2)]}
       rotation={[-Math.PI / 2, 0, 0]}
-      position={[0, 0, 0]}
+      position={[planeX, 0, planeZ]}
       receiveShadow
     >
       <meshStandardMaterial
         map={floorTex || undefined}
-        color={floorTex ? undefined : '#c8b89a'}
+        color={floorTex ? undefined : (floorColor || '#c8b89a')}
         roughness={0.9}
       />
     </Plane>
@@ -673,12 +691,12 @@ function DemoRoom({ wallTexUrl, floorTexUrl, wallColor }) {
 }
 
 // ── Live room ─────────────────────────────────────────────────────────────────
-function LiveRoom({ walls, placed, openings, wallTexUrl, floorTexUrl, wallColor }) {
-  const { cx, cz } = useMemo(() => getRoomCenter(walls), [walls])
+function LiveRoom({ walls, floor, placed, openings, wallTexUrl, floorTexUrl, wallColor, floorColor }) {
+  const { cx, cz } = useMemo(() => getSceneCenter(walls, floor), [walls, floor])
 
   return (
     <group>
-      <Floor walls={walls} floorTexUrl={floorTexUrl} />
+      <Floor walls={walls} floor={floor} floorTexUrl={floorTexUrl} floorColor={floorColor} cx={cx} cz={cz} />
       {walls.map(wall => (
         <Wall3D key={wall.id} wall={wall} wallTexUrl={wallTexUrl} wallColor={wallColor} cx={cx} cz={cz} openings={openings} />
       ))}
@@ -691,7 +709,7 @@ function LiveRoom({ walls, placed, openings, wallTexUrl, floorTexUrl, wallColor 
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function Canvas3D() {
-  const [liveData, setLiveData] = useState({ walls: [], placed: [], openings: [], floorTex: null, wallTex: null, wallColor: '#e8e2d8' })
+  const [liveData, setLiveData] = useState({ walls: [], floor: null, placed: [], openings: [], floorTex: null, floorColor: '#f5f2ee', wallTex: null, wallColor: '#e8e2d8' })
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -700,8 +718,10 @@ export default function Canvas3D() {
         setLiveData(prev => {
           const placed    = window.__editorPlaced    || []
           const walls     = window.__editorWalls     || []
+          const floor     = window.__editorFloor     || null
           const openings  = window.__editorOpenings  || []
           const floorTex  = window.__editorFloorTex  || null
+          const floorColor = window.__editorFloorColor || '#f5f2ee'
           const wallTex   = window.__editorWallTex   || null
           const wallColor = window.__editorWallColor || '#e8e2d8'
           // Always update to catch resize/move changes in placed items
@@ -710,22 +730,24 @@ export default function Canvas3D() {
           if (
             placedSig === prevSig &&
             walls.length === prev.walls.length &&
+            floor === prev.floor &&
             openings.length === prev.openings.length &&
             floorTex === prev.floorTex &&
+            floorColor === prev.floorColor &&
             wallTex === prev.wallTex &&
             wallColor === prev.wallColor
           ) return prev
-          return { walls, placed, openings, floorTex, wallTex, wallColor }
+          return { walls, floor, placed, openings, floorTex, floorColor, wallTex, wallColor }
         })
       }
     }, 100)
     return () => clearInterval(id)
   }, [])
 
-  const hasWalls = liveData.walls.length > 0 || liveData.placed.length > 0
+  const hasDesign = liveData.walls.length > 0 || liveData.placed.length > 0 || (liveData.floor && liveData.floor.w > 0 && liveData.floor.h > 0)
 
   // Position camera above and in front of room
-  const { cx: rcx, cz: rcz } = useMemo(() => getRoomCenter(liveData.walls), [liveData.walls])
+  const { cx: rcx, cz: rcz } = useMemo(() => getSceneCenter(liveData.walls, liveData.floor), [liveData.walls, liveData.floor])
 
   return (
     <div className="canvas3d-root">
@@ -736,7 +758,7 @@ export default function Canvas3D() {
         gl={{ preserveDrawingBuffer: true }}
       >
         <Suspense fallback={null}>
-          <CameraController hasWalls={hasWalls} cx={rcx} cz={rcz} />
+          <CameraController hasWalls={hasDesign} cx={rcx} cz={rcz} />
           <ambientLight intensity={0.6} />
           <directionalLight position={[10, 12, 8]} intensity={1.4} castShadow
             shadow-mapSize={[2048, 2048]}
@@ -748,14 +770,16 @@ export default function Canvas3D() {
           <Sky sunPosition={[100, 20, 100]} />
           <Environment preset="apartment" />
 
-          {hasWalls ? (
+          {hasDesign ? (
             <LiveRoom
               walls={liveData.walls}
+              floor={liveData.floor}
               placed={liveData.placed}
               openings={liveData.openings || []}
               wallTexUrl={liveData.wallTex?.image  || null}
               floorTexUrl={liveData.floorTex?.image || null}
               wallColor={liveData.wallColor || '#e8e2d8'}
+              floorColor={liveData.floorColor || '#f5f2ee'}
             />
           ) : (
             <DemoRoom
@@ -791,7 +815,7 @@ export default function Canvas3D() {
 
       {/* Status */}
       <div className="canvas3d-status">
-        {hasWalls
+        {hasDesign
           ? <span className="canvas3d-status__badge canvas3d-status__badge--purple">
               ✓ {liveData.walls.length} walls · {liveData.placed.length} furniture
             </span>
