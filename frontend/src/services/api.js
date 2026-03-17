@@ -15,10 +15,11 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err.response?.status === 401) {
+    if (err.response?.status === 401 || err.response?.status === 403) {
       localStorage.removeItem('token')
       localStorage.removeItem('user')
-      window.location.href = '/login'
+      const isAdminPath = window.location.pathname.startsWith('/admin')
+      window.location.href = isAdminPath ? '/admin/login' : '/login'
     } else if (err.response?.status >= 500) {
       toast.error('Server error. Please try again later.')
     }
