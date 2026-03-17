@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { Armchair, ArrowLeft, Grid3X3, Loader2, Minus, Plus, Save } from 'lucide-react'
 import { setMode, toggleGrid, setZoom } from '../store/slices/editorSlice'
@@ -16,6 +16,7 @@ import '../styles/pages/EditorPage.css'
 export default function EditorPage() {
   const { projectId } = useParams()
   const navigate      = useNavigate()
+  const [searchParams] = useSearchParams()
   const dispatch      = useDispatch()
   const { mode, zoom } = useSelector(s => s.editor)
 
@@ -27,6 +28,12 @@ export default function EditorPage() {
   const [isSaving,      setIsSaving]      = useState(false)
   const [lastSaved,     setLastSaved]     = useState(null)
   const autoSaveTimer = useRef(null)
+
+  useEffect(() => {
+    if (searchParams.get('view') === '3d') {
+      dispatch(setMode('3d'))
+    }
+  }, [dispatch, searchParams])
 
   // ── Load project on mount ─────────────────────────────────────────
   useEffect(() => {
@@ -92,7 +99,9 @@ export default function EditorPage() {
   // ── Capture a thumbnail from the 2D canvas ────────────────────────
   const captureThumb = () => {
     try {
-      const canvas = document.querySelector('.editor-canvas-area canvas')
+      const canvas = mode === '3d'
+        ? document.querySelector('.canvas3d-root canvas')
+        : document.querySelector('.canvas2d-canvas') || document.querySelector('.editor-canvas-area canvas')
       if (canvas) return canvas.toDataURL('image/jpeg', 0.5)
     } catch {}
     return null
