@@ -54,6 +54,8 @@ export default function EditorPage() {
         window.__editorFloorColor = proj.floorColor || '#f5f2ee'
         if (proj.wallTex)   window.__editorWallTex   = proj.wallTex
         window.__editorWallColor = proj.wallColor || '#e8e2d8'
+        window.__editorLightIntensity = Number.isFinite(Number(proj.lightIntensity)) ? Number(proj.lightIntensity) : 1
+        window.__editorTimeOfDay = ['morning', 'day', 'evening', 'night'].includes(proj.timeOfDay) ? proj.timeOfDay : 'day'
 
         // Signal canvases to reload from globals
         window.__editorRestoreSignal = Date.now()
@@ -91,6 +93,8 @@ export default function EditorPage() {
     floorColor:     window.__editorFloorColor || '#f5f2ee',
     wallTex:        window.__editorWallTex   || null,
     wallColor:      window.__editorWallColor || '#e8e2d8',
+    lightIntensity: Number.isFinite(Number(window.__editorLightIntensity)) ? Number(window.__editorLightIntensity) : 1,
+    timeOfDay:      ['morning', 'day', 'evening', 'night'].includes(window.__editorTimeOfDay) ? window.__editorTimeOfDay : 'day',
     wallCount:      (window.__editorWalls    || []).length,
     furnitureCount: (window.__editorPlaced   || []).length,
     thumbnail:      captureThumb(),
