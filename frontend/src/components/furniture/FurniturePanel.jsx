@@ -1,6 +1,7 @@
-import React, { useState, useRef, useCallback } from 'react'
+import React, { useState, useRef, useCallback, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { setCategory } from '../../store/slices/furnitureSlice'
+import { furnitureService } from '../../services/furniture.service'
 
 const CATS = [
   { id: 'sofa',     label: 'Sofa'    },
@@ -27,39 +28,7 @@ const ICONS = {
   default: <svg width="56" height="56" viewBox="0 0 48 48" fill="none"><rect x="8" y="8" width="32" height="32" rx="4" fill="#6c63ff" opacity="0.5"/></svg>,
 }
 
-const ITEMS = [
-  // { id:'f1',  name:'Modular Sofa',   cat:'sofa',     w:240, d:90  },
-  // { id:'f2',  name:'Eames Chair',    cat:'chair',    w:80,  d:85  },
-  // { id:'f3',  name:'Coffee Table',   cat:'table',    w:120, d:60  },
-  // { id:'f4',  name:'King Bed',       cat:'bed',      w:180, d:200 },
-  // { id:'f5',  name:'Floor Lamp',     cat:'lighting', w:40,  d:40  },
-  // { id:'f6',  name:'Bookshelf',      cat:'storage',  w:80,  d:30  },
-  // { id:'f7',  name:'Dining Chair',   cat:'chair',    w:50,  d:55  },
-  // { id:'f8',  name:'Side Table',     cat:'table',    w:45,  d:45  },
-  // { id:'f9',  name:'Pendant Light',  cat:'lighting', w:30,  d:30  },
-  // { id:'f10', name:'Cabinet',        cat:'storage',  w:100, d:40  },
-  // { id:'f11', name:'Sectional Sofa', cat:'sofa',     w:300, d:150 },
-  // { id:'f12', name:'Kitchen Island', cat:'kitchen',  w:120, d:60  },
-  // { id:'f13', name:'Bathtub',        cat:'bathroom', w:170, d:75  },
-  // { id:'f14', name:'Plant',          cat:'decor',    w:40,  d:40  },
-  // { id:'f15', name:'Armchair',       cat:'chair',    w:80,  d:80  },
-  // { id:'f16', name:'Wardrobe',       cat:'storage',  w:150, d:55  },
-  // { id:'f17', name:'Desk',           cat:'table',    w:140, d:70  },
-  // { id:'f18', name:'TV Stand',       cat:'storage',  w:180, d:45  },
-]
-
-function getAdminFurniture() {
-  try {
-    const store = JSON.parse(localStorage.getItem('adminAssets') || '{"furniture":[]}')
-    return (store.furniture || []).map(f => ({
-      id: f.id, name: f.name, cat: f.category,
-      w: f.width || 80, d: f.depth || 80,
-      image: f.image,
-      model3d: f.model3d || null,
-      isAdmin: true,
-    }))
-  } catch { return [] }
-}
+const ITEMS = []
 
 // Single item card — always same fixed size
 function FurnitureCard({ item, dispatch_drag }) {
@@ -132,6 +101,7 @@ function FurnitureCard({ item, dispatch_drag }) {
 export default function FurniturePanel() {
   const dispatch = useDispatch()
   const { activeCategory } = useSelector(s => s.furniture)
+  const [items, setItems] = useState([])
   const [search,   setSearch]   = useState('')
   const [viewMode, setViewMode] = useState('blueprint')
   const [width,    setWidth]    = useState(260)
@@ -158,7 +128,30 @@ export default function FurniturePanel() {
     e.preventDefault()
   }, [width])
 
-  const allItems = [...getAdminFurniture(), ...ITEMS]
+  useEffect(() => {
+    const loadFurniture = async () => {
+      try {
+        const res = await furnitureService.getAll({ limit: 500 })
+        const mapped = (res.data || []).map((f) => ({
+          id: f._id,
+          name: f.name,
+          cat: f.category,
+          w: f.width || 80,
+          d: f.depth || 80,
+          image: f.imageUrl,
+          model3d: f.model3d || null,
+          isAdmin: true,
+        }))
+        setItems(mapped)
+      } catch {
+        setItems([])
+      }
+    }
+
+    loadFurniture()
+  }, [])
+
+  const allItems = [...items, ...ITEMS]
   const filtered  = allItems.filter(f =>
     (activeCategory ? f.cat === activeCategory : f.cat === 'sofa') &&
     (!search || f.name.toLowerCase().includes(search.toLowerCase()))
