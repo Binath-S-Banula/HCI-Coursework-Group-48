@@ -1,5 +1,17 @@
 const Project = require("../models/Project");
 
+// GET /api/projects/public
+const getPublic = async (req, res, next) => {
+  try {
+    const projects = await Project.find({ isPublic: true })
+      .populate("owner", "name")
+      .sort({ updatedAt: -1 });
+    res.json({ success: true, data: projects });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // GET /api/projects
 const getAll = async (req, res, next) => {
   try {
@@ -115,11 +127,17 @@ const duplicate = async (req, res, next) => {
     const original = await Project.findById(req.params.id);
     if (!original)
       return res.status(404).json({ success: false, message: "Not found" });
+    if (original.owner.toString() !== req.userId && !original.isPublic)
+      return res
+        .status(403)
+        .json({ success: false, message: "Access denied" });
+
     const copy = await Project.create({
       name: `${original.name} (Copy)`,
       description: original.description,
       walls: original.walls,
       placed: original.placed,
+      openings: original.openings,
       floor: original.floor,
       floorTex: original.floorTex,
       floorColor: original.floorColor,
@@ -134,4 +152,4 @@ const duplicate = async (req, res, next) => {
   }
 };
 
-module.exports = { getAll, getOne, create, update, remove, duplicate };
+module.exports = { getPublic, getAll, getOne, create, update, remove, duplicate };
