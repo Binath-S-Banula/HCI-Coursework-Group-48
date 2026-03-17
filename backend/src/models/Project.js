@@ -30,11 +30,18 @@ const projectSchema = new mongoose.Schema({
   walls:    [wallSchema],
   placed:   [placedItemSchema],   // placed furniture items
   openings: [{ type: mongoose.Schema.Types.Mixed }],
+  floor: {
+    x: { type: Number, default: null },
+    y: { type: Number, default: null },
+    w: { type: Number, default: null },
+    h: { type: Number, default: null },
+  },
   floorTex: {                     // selected floor texture
     id:    { type: String, default: null },
     name:  { type: String, default: null },
     image: { type: String, default: null },
   },
+  floorColor: { type: String, default: '#f5f2ee' },
   wallTex: {                      // selected wall texture
     id:    { type: String, default: null },
     name:  { type: String, default: null },
