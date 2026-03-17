@@ -2,12 +2,12 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 import toast from 'react-hot-toast'
-import { Home, Pencil, Plus, Sparkles, Trash2, Waves } from 'lucide-react'
+import { Globe, Home, Pencil, Plus, Sparkles, Trash2, Waves } from 'lucide-react'
 import { projectService } from '../services/project.service'
 import '../styles/pages/DashboardPage.css'
 
 // ── Sub-components ────────────────────────────────────────────────────
-function ProjectCard({ project, onEdit, onDelete, onRename }) {
+function ProjectCard({ project, onEdit, onDelete, onRename, onTogglePublic }) {
   const [renaming, setRenaming] = useState(false)
   const [name,     setName]     = useState(project.name)
 
@@ -23,6 +23,11 @@ function ProjectCard({ project, onEdit, onDelete, onRename }) {
           ? <img src={project.thumbnail} alt={project.name} />
           : <Home size={44} strokeWidth={1.9} />
         }
+        {project.isPublic && (
+          <div className="project-card__public-badge">
+            <Globe size={11} /> Public
+          </div>
+        )}
       </div>
       <div className="project-card__body">
         {renaming ? (
@@ -53,6 +58,12 @@ function ProjectCard({ project, onEdit, onDelete, onRename }) {
       </div>
       <div className="project-card__actions">
         <button className="project-card__action project-card__action--edit" onClick={onEdit}><Pencil size={13} /> Open</button>
+        <button
+          className={`project-card__action ${project.isPublic ? 'project-card__action--unshare' : 'project-card__action--share'}`}
+          onClick={onTogglePublic}
+        >
+          <Globe size={13} /> {project.isPublic ? 'Unshare' : 'Share'}
+        </button>
         <button className="project-card__action project-card__action--delete" onClick={onDelete}><Trash2 size={13} /> Delete</button>
       </div>
     </div>
@@ -141,6 +152,16 @@ export default function DashboardPage() {
     navigate(`/editor/${project._id}`)
   }
 
+  const handleTogglePublic = async (project) => {
+    try {
+      const updatedProject = await projectService.update(project._id, { isPublic: !project.isPublic })
+      setProjects((prev) => prev.map(p => (p._id === project._id ? updatedProject : p)))
+      toast.success(updatedProject.isPublic ? 'Project shared to gallery' : 'Project removed from gallery')
+    } catch {
+      toast.error('Failed to update sharing')
+    }
+  }
+
   return (
     <div className="dashboard">
       <div className="dashboard__inner">
@@ -186,6 +207,7 @@ export default function DashboardPage() {
                 <ProjectCard
                   project={p}
                   onEdit={() => handleEdit(p)}
+                  onTogglePublic={() => handleTogglePublic(p)}
                   onDelete={() => handleDelete(p._id)}
                   onRename={(name) => handleRename(p._id, name)}
                 />
