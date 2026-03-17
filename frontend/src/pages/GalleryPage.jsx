@@ -4,16 +4,7 @@ import { useSelector } from 'react-redux'
 import { projectService } from '../services/project.service'
 import '../styles/pages/GalleryPage.css'
 
-const CATEGORIES = ['all', 'living', 'bedroom', 'kitchen', 'bathroom', 'office', 'dining', 'other']
-
-const DEMO_PROJECTS = [
-  { id: 'd1', name: 'Modern Loft',    category: 'living',   likes: 142, author: 'Sarah K.',  views: 2841, thumb: null, tags: ['minimal','open-plan'] },
-  { id: 'd2', name: 'Cozy Bedroom',   category: 'bedroom',  likes: 98,  author: 'Marco T.',  views: 1503, thumb: null, tags: ['cozy','warm'] },
-  { id: 'd3', name: 'Chef Kitchen',   category: 'kitchen',  likes: 211, author: 'Yuki N.',   views: 4102, thumb: null, tags: ['modern','functional'] },
-  { id: 'd4', name: 'Spa Bathroom',   category: 'bathroom', likes: 87,  author: 'Lena P.',   views: 982,  thumb: null, tags: ['luxury','clean'] },
-  { id: 'd5', name: 'Home Office',    category: 'office',   likes: 163, author: 'Ravi M.',   views: 3210, thumb: null, tags: ['productive','minimal'] },
-  { id: 'd6', name: 'Dining Hall',    category: 'dining',   likes: 74,  author: 'Emma B.',   views: 820,  thumb: null, tags: ['elegant','spacious'] },
-]
+const CATEGORIES = ['all', 'mine', 'other']
 
 const ROOM_GRADIENTS = [
   'linear-gradient(135deg,#1a1a3e,#2d2a6e)',
@@ -27,29 +18,37 @@ const ROOM_EMOJIS = ['🛋️','🛏️','🍳','🛁','💻','🍽️','🪴','
 
 export default function GalleryPage() {
   const navigate = useNavigate()
+  const { isAuthenticated, user } = useSelector(s => s.auth)
   const [activeCat,    setActiveCat]    = useState('all')
   const [search,       setSearch]       = useState('')
   const [sort,         setSort]         = useState('popular')
   const [liked,        setLiked]        = useState({})
-  const [userProjects, setUserProjects] = useState([])
+  const [projects,      setProjects]     = useState([])
+  const [loading,       setLoading]      = useState(true)
 
   useEffect(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem('homeplan3d_projects') || '[]')
-      setUserProjects(saved.map(p => ({ ...p, isUserProject: true })))
-    } catch {}
+    const loadPublic = async () => {
+      setLoading(true)
+      try {
+        const list = await projectService.getPublic()
+        setProjects(list)
+      } catch {
+        setProjects([])
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadPublic()
   }, [])
 
-  const allProjects = [...userProjects, ...DEMO_PROJECTS]
-
-  const filtered = allProjects
+  const filtered = projects
     .filter(p =>
-      (activeCat === 'all' || p.category === activeCat) &&
+      (activeCat === 'all' || (activeCat === 'mine' ? p.owner?._id === user?._id : true)) &&
       (!search || p.name.toLowerCase().includes(search.toLowerCase()))
     )
     .sort((a, b) => {
-      if (sort === 'popular') return (b.likes||0) - (a.likes||0)
-      if (sort === 'newest')  return b.id > a.id ? 1 : -1
+      if (sort === 'popular') return new Date(b.updatedAt) - new Date(a.updatedAt)
+      if (sort === 'newest')  return new Date(b.createdAt) - new Date(a.createdAt)
       return a.name.localeCompare(b.name)
     })
 
@@ -58,9 +57,23 @@ export default function GalleryPage() {
     setLiked(prev => ({ ...prev, [id]: !prev[id] }))
   }
 
-  const handleOpen = (project) => {
-    if (project.isUserProject) navigate(`/editor?project=${project.id}`)
-    else navigate('/editor')
+  const handleOpen = async (project) => {
+    if (!isAuthenticated) {
+      navigate('/login')
+      return
+    }
+
+    if (project.owner?._id === user?._id) {
+      navigate(`/editor/${project._id}?view=3d`)
+      return
+    }
+
+    try {
+      const copy = await projectService.duplicate(project._id)
+      navigate(`/editor/${copy._id}?view=3d`)
+    } catch {
+      navigate('/dashboard')
+    }
   }
 
   const handleCreateDesign = async () => {
@@ -143,7 +156,11 @@ export default function GalleryPage() {
         </div>
 
         {/* Grid / Empty */}
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="gallery-empty">
+            <h3 className="gallery-empty__title">Loading shared designs…</h3>
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="gallery-empty">
             <div className="gallery-empty__icon">🏠</div>
             <h3 className="gallery-empty__title">No designs found</h3>
@@ -155,13 +172,13 @@ export default function GalleryPage() {
         ) : (
           <div className="gallery-grid">
             {filtered.map((project, idx) => (
-              <div key={project.id} className="gallery-card" onClick={() => handleOpen(project)}>
+              <div key={project._id} className="gallery-card" onClick={() => handleOpen(project)}>
 
-                <div className="gallery-card__thumb"
+                <div className="gallery-card__thumb gallery-card__thumb--3d"
                   style={{ background: ROOM_GRADIENTS[idx % ROOM_GRADIENTS.length] }}>
 
-                  {project.thumb
-                    ? <img className="gallery-card__img" src={project.thumb} alt={project.name} />
+                  {project.thumbnail
+                    ? <img className="gallery-card__img gallery-card__img--3d" src={project.thumbnail} alt={project.name} />
                     : (
                       <div className="gallery-card__placeholder">
                         <span className="gallery-card__placeholder-emoji">
@@ -176,33 +193,35 @@ export default function GalleryPage() {
                     )
                   }
 
+                  <div className="gallery-card__viewport-tag">3D Interface</div>
+
                   <div className="gallery-card__overlay">
                     <button className="gallery-card__overlay-btn" onClick={e => { e.stopPropagation(); handleOpen(project) }}>
-                      🎨 Open Design
+                      🧊 Open 3D Interface
                     </button>
                   </div>
 
-                  <div className="gallery-card__cat-badge">{project.category}</div>
-                  {project.isUserProject && <div className="gallery-card__mine-badge">Mine</div>}
+                  <div className="gallery-card__cat-badge">3D</div>
+                  {project.owner?._id === user?._id && <div className="gallery-card__mine-badge">Mine</div>}
                 </div>
 
                 <div className="gallery-card__body">
                   <div className="gallery-card__row">
                     <div>
                       <div className="gallery-card__name">{project.name}</div>
-                      <div className="gallery-card__author">by {project.author || 'You'}</div>
+                      <div className="gallery-card__author">by {project.owner?.name || 'Unknown'}</div>
                     </div>
-                    <button className="gallery-card__like-btn" onClick={e => toggleLike(e, project.id)}>
-                      <span className="gallery-card__like-icon">{liked[project.id] ? '❤️' : '🤍'}</span>
-                      <span className={`gallery-card__like-count gallery-card__like-count--${liked[project.id] ? 'active' : 'inactive'}`}>
-                        {(project.likes||0) + (liked[project.id] ? 1 : 0)}
+                    <button className="gallery-card__like-btn" onClick={e => toggleLike(e, project._id)}>
+                      <span className="gallery-card__like-icon">{liked[project._id] ? '❤️' : '🤍'}</span>
+                      <span className={`gallery-card__like-count gallery-card__like-count--${liked[project._id] ? 'active' : 'inactive'}`}>
+                        {(project.likes||0) + (liked[project._id] ? 1 : 0)}
                       </span>
                     </button>
                   </div>
                   <div className="gallery-card__footer">
-                    <span className="gallery-card__views">👁 {(project.views||0).toLocaleString()}</span>
+                    <span className="gallery-card__views">Updated {new Date(project.updatedAt).toLocaleDateString()}</span>
                     <button className="gallery-card__open-btn" onClick={e => { e.stopPropagation(); handleOpen(project) }}>
-                      Open →
+                      Open 3D →
                     </button>
                   </div>
                 </div>
