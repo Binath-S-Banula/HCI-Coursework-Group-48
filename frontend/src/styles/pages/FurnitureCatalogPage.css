@@ -93,6 +93,7 @@
   color: #555; text-transform: uppercase;
   letter-spacing: 0.08em; margin-bottom: 14px;
 }
+.catalog-sidebar__label--with-icon { display: inline-flex; align-items: center; gap: 6px; }
 .catalog-sidebar__cats { display: flex; flex-direction: column; gap: 4px; }
 
 .catalog-cat-btn {
@@ -112,7 +113,7 @@
 .catalog-cat-btn--inactive:hover {
   background: rgba(255,255,255,0.04); color: #999;
 }
-.catalog-cat-btn__name { font-size: 13px; }
+.catalog-cat-btn__name { font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
 .catalog-cat-btn--active .catalog-cat-btn__name { font-weight: 700; }
 .catalog-cat-btn__count {
   font-size: 10px; padding: 1px 6px; border-radius: 99px;
@@ -147,6 +148,7 @@
 .catalog-search-icon {
   position: absolute; left: 12px; top: 50%;
   transform: translateY(-50%); color: #555; pointer-events: none;
+  display: inline-flex; align-items: center; justify-content: center;
 }
 .catalog-search {
   width: 100%; padding: 9px 12px 9px 34px;
@@ -227,6 +229,7 @@
   font-size: 48px;
   filter: drop-shadow(0 4px 12px rgba(0,0,0,0.4));
   transition: transform 0.3s;
+  display: inline-flex; align-items: center; justify-content: center;
 }
 .catalog-card:hover .catalog-card__emoji { transform: scale(1.1); }
 .catalog-card__dims { font-size: 10px; color: rgba(255,255,255,0.3); font-weight: 600; }
@@ -236,7 +239,7 @@
   width: 32px; height: 32px; border-radius: 50%;
   background: rgba(0,0,0,0.5); border: none;
   cursor: pointer; display: flex; align-items: center;
-  justify-content: center; font-size: 14px;
+  justify-content: center;
   backdrop-filter: blur(8px); transition: transform 0.15s;
 }
 .catalog-card__wish-btn:hover { transform: scale(1.15); }
@@ -263,6 +266,7 @@
   background: linear-gradient(135deg, #6c63ff, #43d9ad);
   color: #fff; border: none; cursor: pointer;
   font-weight: 700; font-size: 13px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   box-shadow: 0 4px 16px rgba(108,99,255,0.5);
   transition: transform 0.15s;
 }
@@ -317,7 +321,7 @@
   width: 100%; height: 100%;
   object-fit: contain; padding: 6px;
 }
-.catalog-list-row__thumb-emoji { font-size: 28px; }
+.catalog-list-row__thumb-emoji { font-size: 28px; display: inline-flex; align-items: center; justify-content: center; }
 .catalog-list-row__info { flex: 1; min-width: 0; }
 .catalog-list-row__name-row {
   display: flex; align-items: center; gap: 8px; margin-bottom: 4px;
@@ -366,7 +370,7 @@
   border: 1px dashed rgba(255,255,255,0.06);
   border-radius: 16px;
 }
-.catalog-empty__icon { font-size: 48px; margin-bottom: 14px; }
+.catalog-empty__icon { font-size: 48px; margin-bottom: 14px; display: inline-flex; align-items: center; justify-content: center; }
 .catalog-empty__title {
   color: #666; font-family: 'Syne', sans-serif;
   font-size: 18px; font-weight: 800; margin-bottom: 8px;
@@ -414,7 +418,7 @@
   position: relative; overflow: hidden;
 }
 .catalog-modal__img { width: 100%; height: 100%; object-fit: contain; padding: 20px; }
-.catalog-modal__placeholder-emoji { font-size: 72px; }
+.catalog-modal__placeholder-emoji { font-size: 72px; display: inline-flex; align-items: center; justify-content: center; }
 .catalog-modal__close-btn {
   position: absolute; top: 14px; right: 14px;
   width: 32px; height: 32px; border-radius: 50%;
@@ -479,6 +483,7 @@
   background: linear-gradient(135deg, #6c63ff, #5b54e8);
   color: #fff; border: none; cursor: pointer;
   font-weight: 700; font-size: 14px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   box-shadow: 0 4px 16px rgba(108,99,255,0.35);
   transition: opacity 0.15s, transform 0.15s;
 }
@@ -487,7 +492,8 @@
   padding: 12px 18px; border-radius: 12px;
   background: rgba(255,255,255,0.05);
   border: 1px solid rgba(255,255,255,0.08);
-  color: #888; cursor: pointer; font-size: 18px;
+  color: #888; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
   transition: background 0.15s;
 }
 .catalog-modal__wish-btn:hover { background: rgba(255,255,255,0.09); }
