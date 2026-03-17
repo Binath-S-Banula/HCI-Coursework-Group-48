@@ -13,6 +13,15 @@ const NAV = [
   { id:'textures',  icon:'🎨', label:'Textures'  },
 ]
 
+function Field({ label, field, placeholder, type='text', obj, setObj }) {
+  return (
+    <div className="admin-field">
+      <label>{label}</label>
+      <input type={type} value={obj[field]} placeholder={placeholder} onChange={e => setObj(p=>({...p,[field]:e.target.value}))} />
+    </div>
+  )
+}
+
 export default function AdminPage() {
   const navigate = useNavigate()
   const dispatch = useDispatch()
@@ -70,13 +79,6 @@ export default function AdminPage() {
         <input type="file" accept="image/*" style={{ display:'none' }} onChange={e => { const f=e.target.files?.[0]; if(f) readFile(f,onFile); e.target.value='' }} />
       </label>
       {preview && <button className="admin-upload-clear" onClick={onClear}>✕ Remove</button>}
-    </div>
-  )
-
-  const Field = ({ label, field, placeholder, type='text', obj, setObj }) => (
-    <div className="admin-field">
-      <label>{label}</label>
-      <input type={type} value={obj[field]} placeholder={placeholder} onChange={e => setObj(p=>({...p,[field]:e.target.value}))} />
     </div>
   )
 
@@ -319,9 +321,9 @@ export default function AdminPage() {
           </div>
         </header>
         <main className="admin-content">
-          {page==='dashboard' && <DashboardView />}
-          {page==='furniture' && <FurnitureView />}
-          {page==='textures'  && <TexturesView />}
+          {page==='dashboard' && DashboardView()}
+          {page==='furniture' && FurnitureView()}
+          {page==='textures'  && TexturesView()}
         </main>
       </div>
     </div>
