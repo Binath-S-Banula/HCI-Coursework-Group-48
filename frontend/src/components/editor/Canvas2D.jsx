@@ -862,7 +862,7 @@ export default function Canvas2D({ onDesignChange }) {
           <div className="canvas2d-tex-panel">
             {/* Wall Color */}
             <div>
-              <div className="canvas2d-tex-section__label">🎨 WALL COLOR</div>
+              <div className="canvas2d-tex-section__label"> WALL COLOR</div>
               <div className="canvas2d-tex-section__swatches">
                 {['#e8e2d8','#2d2a4a','#1a3a4a','#4a2a1a','#1a4a2a','#3a1a4a','#4a3a1a','#1a1a1a','#f5f0e8','#c8b89a'].map(col => (
                   <div key={col} onClick={() => { setWallColor(col); setWallTex(null) }}
@@ -878,25 +878,9 @@ export default function Canvas2D({ onDesignChange }) {
               </div>
             </div>
 
-            {/* Wall Textures */}
-            <div>
-              <div className="canvas2d-tex-section__label">🧱 WALL TEXTURES</div>
-              <div className="canvas2d-tex-section__swatches">
-                <button onClick={() => setWallTex(null)}
-                  className={`canvas2d-tex-swatch--none ${!wallTex ? 'canvas2d-tex-swatch--none-active' : 'canvas2d-tex-swatch--none-inactive'}`}>∅</button>
-                {wallTextures.map(t => (
-                  <div key={t.id} onClick={() => { setWallTex(t); setWallColor('#e8e2d8') }}
-                    className={`canvas2d-tex-img ${wallTex?.id === t.id ? 'canvas2d-tex-img--wall-active' : 'canvas2d-tex-img--wall-inactive'}`}>
-                    <img src={t.image} alt={t.name} />
-                  </div>
-                ))}
-                {wallTextures.length === 0 && <span className="canvas2d-tex-empty">None — go to Admin</span>}
-              </div>
-            </div>
-
             {/* Floor Textures */}
             <div>
-              <div className="canvas2d-tex-section__label">🪵 FLOOR TEXTURES</div>
+              <div className="canvas2d-tex-section__label"> FLOOR TEXTURES</div>
               <div className="canvas2d-tex-section__swatches">
                 <button onClick={() => setFloorTex(null)}
                   className={`canvas2d-tex-swatch--none ${!floorTex ? 'canvas2d-tex-swatch--none-floor-active' : 'canvas2d-tex-swatch--none-inactive'}`}>∅</button>
