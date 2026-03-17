@@ -69,6 +69,8 @@ export default function Canvas2D({ onDesignChange }) {
   const [bgImage,      setBgImage]      = useState(null)
   const [bgOpacity,    setBgOpacity]    = useState(0.3)
   const [floorTex,     setFloorTex]     = useState(() => window.__editorFloorTex || null)
+  const [floorRect,    setFloorRect]    = useState(() => window.__editorFloor || null)
+  const [floorColor,   setFloorColor]   = useState(() => window.__editorFloorColor || '#f5f2ee')
   const [wallTex,      setWallTex]      = useState(() => window.__editorWallTex  || null)
   const [wallColor,    setWallColor]    = useState(() => window.__editorWallColor || '#e8e2d8')
   const [texPanel,     setTexPanel]     = useState(false)
@@ -120,10 +122,12 @@ export default function Canvas2D({ onDesignChange }) {
     window.__editorPlaced   = placed
     window.__editorOpenings = openings
     window.__editorFloorTex = floorTex
+    window.__editorFloor = floorRect
+    window.__editorFloorColor = floorColor
     window.__editorWallTex  = wallTex
     window.__editorWallColor = wallColor
-    if (onDesignChange) onDesignChange({ walls, placed, openings, floorTex, wallTex, wallColor })
-  }, [walls, placed, openings, floorTex, wallTex, wallColor])
+    if (onDesignChange) onDesignChange({ walls, placed, openings, floorTex, floorRect, floorColor, wallTex, wallColor })
+  }, [walls, placed, openings, floorTex, floorRect, floorColor, wallTex, wallColor])
 
   // ── Restore from saved project when EditorPage signals load ──────────
   useEffect(() => {
@@ -132,10 +136,12 @@ export default function Canvas2D({ onDesignChange }) {
     const p  = window.__editorPlaced    || []
     const o  = window.__editorOpenings  || []
     const f  = window.__editorFloorTex  || null
+    const fr = window.__editorFloor     || null
+    const fc = window.__editorFloorColor || '#f5f2ee'
     const t  = window.__editorWallTex   || null
     const wc = window.__editorWallColor || '#e8e2d8'
     setWalls(w);  setPlaced(p);  setOpenings(o)
-    setFloorTex(f);  setWallTex(t);  setWallColor(wc)
+    setFloorTex(f);  setFloorRect(fr); setFloorColor(fc); setWallTex(t);  setWallColor(wc)
     undoStack.current = []
     redoStack.current = []
     delete window.__editorRestoreSignal
@@ -241,13 +247,36 @@ export default function Canvas2D({ onDesignChange }) {
     ctx.translate(pan.x, pan.y)
     ctx.scale(zoom, zoom)
 
-    // Floor
-    if (floorTex && loadedImages[floorTex.id]) {
-      ctx.fillStyle = ctx.createPattern(loadedImages[floorTex.id], 'repeat') || '#f5f2ee'
-    } else {
-      ctx.fillStyle = '#f5f2ee'
-    }
+    // Background
+    ctx.fillStyle = '#eef1f7'
     ctx.fillRect(0, 0, W / zoom, H / zoom)
+
+    // Floor (drawn area)
+    if (floorRect && floorRect.w > 0 && floorRect.h > 0) {
+      if (floorTex && loadedImages[floorTex.id]) {
+        ctx.fillStyle = ctx.createPattern(loadedImages[floorTex.id], 'repeat') || floorColor
+        ctx.fillRect(floorRect.x, floorRect.y, floorRect.w, floorRect.h)
+      } else {
+        ctx.fillStyle = floorColor
+        ctx.fillRect(floorRect.x, floorRect.y, floorRect.w, floorRect.h)
+
+        const tileSize = GRID
+        ctx.strokeStyle = 'rgba(0,0,0,0.08)'
+        ctx.lineWidth = 0.7
+        for (let x = floorRect.x; x <= floorRect.x + floorRect.w; x += tileSize) {
+          ctx.beginPath(); ctx.moveTo(x, floorRect.y); ctx.lineTo(x, floorRect.y + floorRect.h); ctx.stroke()
+        }
+        for (let y = floorRect.y; y <= floorRect.y + floorRect.h; y += tileSize) {
+          ctx.beginPath(); ctx.moveTo(floorRect.x, y); ctx.lineTo(floorRect.x + floorRect.w, y); ctx.stroke()
+        }
+      }
+
+      ctx.strokeStyle = 'rgba(67,217,173,0.7)'
+      ctx.lineWidth = 2
+      ctx.setLineDash([6, 4])
+      ctx.strokeRect(floorRect.x, floorRect.y, floorRect.w, floorRect.h)
+      ctx.setLineDash([])
+    }
 
     if (bgImage) {
       ctx.globalAlpha = bgOpacity
@@ -396,7 +425,7 @@ export default function Canvas2D({ onDesignChange }) {
 
       // Clear the wall gap — draw floor color over wall
       ctx.save()
-      ctx.strokeStyle = '#f5f2ee'
+      ctx.strokeStyle = floorColor || '#f5f2ee'
       ctx.lineWidth = 12
       ctx.lineCap = 'butt'
       ctx.beginPath()
@@ -479,17 +508,33 @@ export default function Canvas2D({ onDesignChange }) {
       ctx.fillText(`${len} cm`, mx, my - 8)
     }
 
+    // Floor preview
+    if (drawStart && activeTool === 'floor') {
+      const ex = snap(mousePos.x), ey = snap(mousePos.y)
+      const x = Math.min(drawStart.x, ex)
+      const y = Math.min(drawStart.y, ey)
+      const w = Math.abs(ex - drawStart.x)
+      const h = Math.abs(ey - drawStart.y)
+      ctx.fillStyle = 'rgba(67,217,173,0.16)'
+      ctx.fillRect(x, y, w, h)
+      ctx.strokeStyle = 'rgba(67,217,173,0.9)'
+      ctx.lineWidth = 2
+      ctx.setLineDash([8, 4])
+      ctx.strokeRect(x, y, w, h)
+      ctx.setLineDash([])
+    }
+
     // Crosshair
-    if (activeTool === 'wall') {
+    if (activeTool === 'wall' || activeTool === 'floor') {
       const sx = snap(mousePos.x), sy = snap(mousePos.y)
-      ctx.strokeStyle = 'rgba(108,99,255,0.6)'; ctx.lineWidth = 1
+      ctx.strokeStyle = activeTool === 'floor' ? 'rgba(67,217,173,0.75)' : 'rgba(108,99,255,0.6)'; ctx.lineWidth = 1
       ctx.beginPath(); ctx.moveTo(sx - 10, sy); ctx.lineTo(sx + 10, sy); ctx.stroke()
       ctx.beginPath(); ctx.moveTo(sx, sy - 10); ctx.lineTo(sx, sy + 10); ctx.stroke()
-      ctx.fillStyle = '#6c63ff'; ctx.beginPath(); ctx.arc(sx, sy, 3, 0, Math.PI * 2); ctx.fill()
+      ctx.fillStyle = activeTool === 'floor' ? '#43d9ad' : '#6c63ff'; ctx.beginPath(); ctx.arc(sx, sy, 3, 0, Math.PI * 2); ctx.fill()
     }
 
     ctx.restore()
-  }, [walls, drawStart, mousePos, showGrid, bgImage, bgOpacity, placed, openings, selectedWall, selectedItem, selectedOpening, activeTool, floorTex, wallTex, wallColor, loadedImages, zoom, pan])
+  }, [walls, drawStart, mousePos, showGrid, bgImage, bgOpacity, placed, openings, selectedWall, selectedItem, selectedOpening, activeTool, floorTex, floorRect, floorColor, wallTex, wallColor, loadedImages, zoom, pan])
 
   // ── Coordinate helpers ───────────────────────────────────────────────
   const screenToWorld = useCallback((clientX, clientY) => {
@@ -581,6 +626,14 @@ export default function Canvas2D({ onDesignChange }) {
         pushHistory(newWalls, placedRef.current, openingsRef.current)
         setDrawStart(pos)
       }
+    }
+
+    if (activeTool === 'floor') {
+      const pos = getPos(e)
+      setDrawStart(pos)
+      setSelectedWall(null)
+      setSelectedItem(null)
+      setSelectedOpening(null)
     }
 
     if (activeTool === 'door' || activeTool === 'window') {
@@ -678,6 +731,22 @@ export default function Canvas2D({ onDesignChange }) {
   // ── Mouse up — end drag ───────────────────────────────────────────────
   const handleMouseUp = useCallback((e) => {
     if (e.button === 1) { isPanning.current = false; return }
+
+    if (e.button === 0 && activeTool === 'floor' && drawStart) {
+      const world = screenToWorld(e.clientX, e.clientY)
+      const ex = snap(world.x), ey = snap(world.y)
+      const x = Math.min(drawStart.x, ex)
+      const y = Math.min(drawStart.y, ey)
+      const w = Math.abs(ex - drawStart.x)
+      const h = Math.abs(ey - drawStart.y)
+      if (w >= GRID && h >= GRID) {
+        setFloorRect({ x, y, w, h })
+      }
+      setDrawStart(null)
+      if (canvasRef.current) canvasRef.current.style.cursor = ''
+      return
+    }
+
     if (dragState.current) {
       // Push to undo stack: restore original item state before drag
       const orig = dragState.current.origItem
@@ -692,7 +761,7 @@ export default function Canvas2D({ onDesignChange }) {
     }
     dragState.current = null
     if (canvasRef.current) canvasRef.current.style.cursor = ''
-  }, [])
+  }, [activeTool, drawStart, screenToWorld])
 
   const handleDblClick   = () => setDrawStart(null)
   const handleRightClick = (e) => { e.preventDefault(); setDrawStart(null) }
@@ -846,7 +915,13 @@ export default function Canvas2D({ onDesignChange }) {
             </div>
           )}
 
-          {!selItem && !selectedWall && (
+          {activeTool === 'floor' && !selItem && !selectedWall && (
+            <div className="canvas2d-toolbar__actions">
+              <span className="canvas2d-toolbar__hint canvas2d-toolbar__hint--teal">▭ Click and drag to draw floor area</span>
+            </div>
+          )}
+
+          {!selItem && !selectedWall && activeTool !== 'floor' && (
             <div className="canvas2d-toolbar__actions">
               <span className="canvas2d-toolbar__hint canvas2d-toolbar__hint--dim">
                 {activeTool === 'wall' ? '✏ Click to draw walls · Double-click to finish' : '↖ Click to select · Drag to move · Corner handles to resize · ↻ to rotate'}
@@ -880,6 +955,24 @@ export default function Canvas2D({ onDesignChange }) {
 
             {/* Floor Textures */}
             <div>
+              <div className="canvas2d-tex-section__label"> FLOOR COLOR</div>
+              <div className="canvas2d-tex-section__swatches">
+                {['#f5f2ee','#d7c8aa','#bfa58b','#9b8a72','#7f6c58','#5e5246','#2c2c32','#e8efe6','#c4d0b8','#bcd2e5'].map(col => (
+                  <div key={col} onClick={() => { setFloorColor(col); setFloorTex(null) }}
+                    className={`canvas2d-color-swatch${floorColor === col && !floorTex ? ' canvas2d-color-swatch--active' : ''}`}
+                    style={{ background: col }} />
+                ))}
+                <div className="canvas2d-color-picker-wrap">
+                  <div className="canvas2d-color-picker-icon" style={{ background: floorColor }}>🖊</div>
+                  <input type="color" value={floorColor}
+                    onChange={e => { setFloorColor(e.target.value); setFloorTex(null) }}
+                    className="canvas2d-color-picker-input" />
+                </div>
+              </div>
+            </div>
+
+            {/* Floor Textures */}
+            <div>
               <div className="canvas2d-tex-section__label"> FLOOR TEXTURES</div>
               <div className="canvas2d-tex-section__swatches">
                 <button onClick={() => setFloorTex(null)}
@@ -898,7 +991,7 @@ export default function Canvas2D({ onDesignChange }) {
 
         {/* Canvas */}
         <canvas ref={canvasRef}
-          className={`canvas2d-canvas canvas2d-canvas--${activeTool === 'wall' ? 'wall' : 'default'}`}
+          className={`canvas2d-canvas canvas2d-canvas--${activeTool === 'wall' || activeTool === 'floor' ? 'wall' : 'default'}`}
           onMouseMove={onMouseMove}
           onMouseDown={handleMouseDown}
           onMouseUp={handleMouseUp}
