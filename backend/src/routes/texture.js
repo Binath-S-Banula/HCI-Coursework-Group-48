@@ -10,7 +10,7 @@ router.get('/', ctrl.getAll)
 router.post('/', protect, adminOnly, upload.single('image'), async (req, res, next) => {
   try {
     if (req.file) {
-      req.body.imageUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`
+      req.body.imageUrl = `${req.protocol}://${req.get('host')}/uploads/images/${req.file.filename}`
     }
     ctrl.create(req, res, next)
   } catch (err) { next(err) }
