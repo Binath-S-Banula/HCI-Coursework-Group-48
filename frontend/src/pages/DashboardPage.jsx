@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 import toast from 'react-hot-toast'
-import { Globe, Home, Pencil, Plus, Sparkles, Trash2, Waves } from 'lucide-react'
+import { Edit3, Globe, Home, Pencil, Plus, Sparkles, Trash2, Waves } from 'lucide-react'
 import { projectService } from '../services/project.service'
 import '../styles/pages/DashboardPage.css'
 
@@ -58,6 +58,7 @@ function ProjectCard({ project, onEdit, onDelete, onRename, onTogglePublic }) {
       </div>
       <div className="project-card__actions">
         <button className="project-card__action project-card__action--edit" onClick={onEdit}><Pencil size={13} /> Open</button>
+        <button className="project-card__action project-card__action--rename" onClick={() => setRenaming(true)}><Edit3 size={13} /> Rename</button>
         <button
           className={`project-card__action ${project.isPublic ? 'project-card__action--unshare' : 'project-card__action--share'}`}
           onClick={onTogglePublic}
