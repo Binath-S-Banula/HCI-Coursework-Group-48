@@ -9,7 +9,7 @@
   flex-wrap: wrap; gap: 1rem;
 }
 .dashboard__title { font-family: 'Syne', sans-serif; font-size: 2rem; font-weight: 900; }
-.dashboard__subtitle { color: #6b7280; font-size: 0.875rem; margin-top: 0.25rem; }
+.dashboard__subtitle { color: #6b7280; font-size: 0.875rem; margin-top: 0.25rem; display: inline-flex; align-items: center; gap: 0.35rem; }
 .dashboard__new-btn {
   display: flex; align-items: center; gap: 0.5rem;
   padding: 0.75rem 1.5rem; border-radius: 0.75rem;
@@ -104,6 +104,7 @@
   flex: 1; padding: 0.5rem; border-radius: 0.5rem;
   font-size: 0.75rem; font-weight: 600;
   border: none; cursor: pointer; transition: background 0.2s;
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem;
 }
 .project-card__action--edit { background: rgba(108,99,255,0.15); color: #a78bfa; }
 .project-card__action--edit:hover { background: rgba(108,99,255,0.25); }
@@ -126,7 +127,7 @@
   border: 1px dashed rgba(255,255,255,0.08);
   border-radius: 1.5rem;
 }
-.dashboard-empty__icon { font-size: 4rem; margin-bottom: 1rem; }
+.dashboard-empty__icon { font-size: 4rem; margin-bottom: 1rem; display: inline-flex; align-items: center; justify-content: center; }
 .dashboard-empty__title { font-family: 'Syne', sans-serif; font-size: 1.5rem; font-weight: 800; margin-bottom: 0.5rem; }
 .dashboard-empty__sub { color: #6b7280; margin-bottom: 2rem; }
 .dashboard-empty__btn {
