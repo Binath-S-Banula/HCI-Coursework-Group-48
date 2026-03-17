@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Armchair, Heart, HeartOff, LayoutGrid, List, Paintbrush, Search } from 'lucide-react'
 import '../styles/pages/FurnitureCatalogPage.css'
 
 const getAdminAssets = () => JSON.parse(localStorage.getItem('adminAssets') || '{"furniture":[],"textures":[]}')
@@ -28,7 +29,108 @@ const ITEM_GRADIENTS = {
   // bathroom:'linear-gradient(135deg,#061a1a,#0d3a3a)',
   // decor:   'linear-gradient(135deg,#1a0a1a,#3d1a3d)',
 }
-const ITEM_EMOJIS = { sofa:'🛋️',chair:'🪑',table:'🪵',bed:'🛏️',storage:'🗄️',light:'💡',kitchen:'🍳',bathroom:'🪥',decor:'🪴',default:'📦' }
+const CategoryIcon = ({ cat, size = 16 }) => {
+  const props = {
+    width: size,
+    height: size,
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 1.9,
+    strokeLinecap: 'round',
+    strokeLinejoin: 'round',
+    'aria-hidden': true,
+  }
+
+  switch (cat) {
+    case 'all':
+      return (
+        <svg {...props}>
+          <rect x="3" y="3" width="7" height="7" rx="1.5" />
+          <rect x="14" y="3" width="7" height="7" rx="1.5" />
+          <rect x="3" y="14" width="7" height="7" rx="1.5" />
+          <rect x="14" y="14" width="7" height="7" rx="1.5" />
+        </svg>
+      )
+    case 'sofa':
+      return (
+        <svg {...props}>
+          <rect x="4" y="10" width="16" height="7" rx="2" />
+          <path d="M6 10V8a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2" />
+          <path d="M6 17v2M18 17v2" />
+        </svg>
+      )
+    case 'chair':
+      return (
+        <svg {...props}>
+          <rect x="7" y="5" width="10" height="7" rx="2" />
+          <rect x="7" y="12" width="10" height="4" rx="1.5" />
+          <path d="M8 16v3M16 16v3" />
+        </svg>
+      )
+    case 'table':
+      return (
+        <svg {...props}>
+          <rect x="4" y="7" width="16" height="3.5" rx="1.5" />
+          <path d="M7 10.5v8M17 10.5v8" />
+        </svg>
+      )
+    case 'bed':
+      return (
+        <svg {...props}>
+          <path d="M4 9h4a2 2 0 0 1 2 2v2H4z" />
+          <rect x="10" y="9" width="10" height="6" rx="2" />
+          <path d="M4 15h16M5 15v3M19 15v3" />
+        </svg>
+      )
+    case 'storage':
+      return (
+        <svg {...props}>
+          <rect x="6" y="3.5" width="12" height="17" rx="2" />
+          <path d="M6 9h12M6 14.5h12" />
+          <circle cx="12" cy="6.3" r=".8" fill="currentColor" />
+          <circle cx="12" cy="11.8" r=".8" fill="currentColor" />
+          <circle cx="12" cy="17.3" r=".8" fill="currentColor" />
+        </svg>
+      )
+    case 'light':
+      return (
+        <svg {...props}>
+          <path d="M12 4a5 5 0 0 0-3.5 8.6c.8.7 1.2 1.4 1.2 2.3h4.6c0-.9.4-1.6 1.2-2.3A5 5 0 0 0 12 4z" />
+          <path d="M10 17h4M10.5 19h3" />
+        </svg>
+      )
+    case 'kitchen':
+      return (
+        <svg {...props}>
+          <path d="M7 4v7M5.5 4v7M8.5 4v7M7 11v9" />
+          <path d="M15 4v16M15 4c2 0 3 1.5 3 3.5S17 11 15 11" />
+        </svg>
+      )
+    case 'bathroom':
+      return (
+        <svg {...props}>
+          <path d="M4 12h16v3a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4z" />
+          <path d="M7 12V9a2 2 0 0 1 2-2h2" />
+        </svg>
+      )
+    case 'decor':
+      return (
+        <svg {...props}>
+          <path d="M12 5c3 1.2 4.5 3.7 4.5 6.5H12z" />
+          <path d="M12 5c-3 1.2-4.5 3.7-4.5 6.5H12z" />
+          <path d="M12 11.5V18" />
+          <path d="M8.5 18h7l-1 2h-5z" />
+        </svg>
+      )
+    default:
+      return (
+        <svg {...props}>
+          <rect x="5" y="5" width="14" height="14" rx="2" />
+        </svg>
+      )
+  }
+}
 
 const StarRating = ({ rating }) => {
   const full = Math.floor(rating), half = rating % 1 >= 0.5
@@ -80,7 +182,6 @@ export default function FurnitureCatalogPage() {
   }
 
   const gradient = (cat) => ITEM_GRADIENTS[cat] || 'linear-gradient(135deg,#1a1a2e,#2d2a6e)'
-  const emoji    = (cat) => ITEM_EMOJIS[cat] || ITEM_EMOJIS.default
 
   return (
     <div className="catalog-page">
@@ -89,7 +190,7 @@ export default function FurnitureCatalogPage() {
       <div className="catalog-hero">
         <div className="catalog-hero__bg" />
         <div className="catalog-hero__inner">
-          <div className="catalog-hero__badge">🪑 Furniture Catalog</div>
+          <div className="catalog-hero__badge"><Armchair size={14} strokeWidth={2} /> Furniture Catalog</div>
           <h1 className="catalog-hero__title">
             Premium Furniture<br />
             <span className="catalog-hero__title-gradient">for Every Space</span>
@@ -117,7 +218,7 @@ export default function FurnitureCatalogPage() {
                     className={`catalog-cat-btn catalog-cat-btn--${activeCat === cat ? 'active' : 'inactive'}`}
                     onClick={() => setActiveCat(cat)}>
                     <span className="catalog-cat-btn__name">
-                      {emoji(cat)} {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                      <CategoryIcon cat={cat} size={18} /> {cat.charAt(0).toUpperCase() + cat.slice(1)}
                     </span>
                     <span className="catalog-cat-btn__count">{count}</span>
                   </button>
@@ -127,7 +228,7 @@ export default function FurnitureCatalogPage() {
 
             {Object.values(wishlist).some(Boolean) && (
               <div className="catalog-sidebar__divider">
-                <div className="catalog-sidebar__label">❤️ Wishlist</div>
+                <div className="catalog-sidebar__label catalog-sidebar__label--with-icon"><Heart size={12} fill="currentColor" /> Wishlist</div>
                 <div className="catalog-sidebar__wishlist-count">
                   {Object.values(wishlist).filter(Boolean).length} items saved
                 </div>
@@ -142,7 +243,7 @@ export default function FurnitureCatalogPage() {
           {/* Toolbar */}
           <div className="catalog-toolbar">
             <div className="catalog-search-wrap">
-              <span className="catalog-search-icon">🔍</span>
+              <span className="catalog-search-icon"><Search size={14} strokeWidth={2.1} /></span>
               <input className="catalog-search" value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Search furniture..." />
@@ -153,10 +254,10 @@ export default function FurnitureCatalogPage() {
               <option value="name">A–Z</option>
             </select>
             <div className="catalog-view-toggle">
-              {[['grid','⊞'],['list','☰']].map(([v, icon]) => (
+              {[['grid', LayoutGrid], ['list', List]].map(([v, Icon]) => (
                 <button key={v} onClick={() => setView(v)}
                   className={`catalog-view-btn catalog-view-btn--${view === v ? 'active' : 'inactive'}`}>
-                  {icon}
+                  <Icon size={14} strokeWidth={2.1} />
                 </button>
               ))}
             </div>
@@ -169,7 +270,7 @@ export default function FurnitureCatalogPage() {
           {/* Items */}
           {filtered.length === 0 ? (
             <div className="catalog-empty">
-              <div className="catalog-empty__icon">🪑</div>
+              <div className="catalog-empty__icon"><Armchair size={44} strokeWidth={1.7} /></div>
               <h3 className="catalog-empty__title">No items found</h3>
               <p className="catalog-empty__sub">Try a different search or add items via Admin.</p>
             </div>
@@ -181,17 +282,20 @@ export default function FurnitureCatalogPage() {
                     {item.image
                       ? <img className="catalog-card__img" src={item.image} alt={item.name} />
                       : <div className="catalog-card__placeholder">
-                          <span className="catalog-card__emoji">{emoji(item.category)}</span>
+                          <span className="catalog-card__emoji"><CategoryIcon cat={item.category} size={46} /></span>
                           <span className="catalog-card__dims">{item.width}×{item.depth}cm</span>
                         </div>
                     }
                     <button className="catalog-card__wish-btn" onClick={e => toggleWishlist(e, item.id)}>
-                      {wishlist[item.id] ? '❤️' : '🤍'}
+                      {wishlist[item.id]
+                        ? <Heart size={14} fill="currentColor" strokeWidth={2.1} />
+                        : <HeartOff size={14} strokeWidth={2.1} />
+                      }
                     </button>
                     {item.isReal && <div className="catalog-card__real-badge">In Catalog</div>}
                     <div className="catalog-card__overlay">
                       <button className="catalog-card__overlay-btn" onClick={e => { e.stopPropagation(); handleUseInEditor(item) }}>
-                        🎨 Use in Editor
+                        <Paintbrush size={14} strokeWidth={2.1} /> Use in Editor
                       </button>
                     </div>
                   </div>
@@ -223,7 +327,7 @@ export default function FurnitureCatalogPage() {
                   <div className="catalog-list-row__thumb" style={{ background: gradient(item.category) }}>
                     {item.image
                       ? <img src={item.image} alt={item.name} />
-                      : <span className="catalog-list-row__thumb-emoji">{emoji(item.category)}</span>
+                      : <span className="catalog-list-row__thumb-emoji"><CategoryIcon cat={item.category} size={28} /></span>
                     }
                   </div>
                   <div className="catalog-list-row__info">
@@ -257,7 +361,7 @@ export default function FurnitureCatalogPage() {
             <div className="catalog-modal__img-wrap" style={{ background: gradient(selectedItem.category) }}>
               {selectedItem.image
                 ? <img className="catalog-modal__img" src={selectedItem.image} alt={selectedItem.name} />
-                : <span className="catalog-modal__placeholder-emoji">{emoji(selectedItem.category)}</span>
+                : <span className="catalog-modal__placeholder-emoji"><CategoryIcon cat={selectedItem.category} size={72} /></span>
               }
               <button className="catalog-modal__close-btn" onClick={() => setSelectedItem(null)}>×</button>
             </div>
@@ -274,7 +378,7 @@ export default function FurnitureCatalogPage() {
               </div>
 
               <div className="catalog-modal__specs">
-                {[['Width',selectedItem.width+'cm'],['Depth',selectedItem.depth+'cm'],['Category',selectedItem.category],['Status',selectedItem.isReal?'✅ In Catalog':'📋 Demo']].map(([k,v]) => (
+                {[['Width',selectedItem.width+'cm'],['Depth',selectedItem.depth+'cm'],['Category',selectedItem.category],['Status',selectedItem.isReal?'In Catalog':'Demo']].map(([k,v]) => (
                   <div key={k}>
                     <div className="catalog-modal__spec-key">{k}</div>
                     <div className="catalog-modal__spec-val">{v}</div>
@@ -295,10 +399,13 @@ export default function FurnitureCatalogPage() {
 
               <div className="catalog-modal__actions">
                 <button className="catalog-modal__use-btn" onClick={() => handleUseInEditor(selectedItem)}>
-                  🎨 Use in Editor
+                  <Paintbrush size={14} strokeWidth={2.1} /> Use in Editor
                 </button>
                 <button className="catalog-modal__wish-btn" onClick={e => toggleWishlist(e, selectedItem.id)}>
-                  {wishlist[selectedItem.id] ? '❤️' : '🤍'}
+                  {wishlist[selectedItem.id]
+                    ? <Heart size={16} fill="currentColor" strokeWidth={2.1} />
+                    : <HeartOff size={16} strokeWidth={2.1} />
+                  }
                 </button>
               </div>
             </div>
