@@ -807,9 +807,6 @@ export default function Canvas2D({ onDesignChange }) {
 
         {/* Toolbar */}
         <div className="canvas2d-toolbar">
-          <button className="canvas2d-toolbar__btn" onClick={() => fileRef.current?.click()}>
-            📁 Blueprint
-          </button>
           {bgImage && (
             <>
               <input type="range" min="0.05" max="1" step="0.05" value={bgOpacity}
@@ -820,7 +817,7 @@ export default function Canvas2D({ onDesignChange }) {
           )}
           <button className={`canvas2d-toolbar__btn${texPanel ? ' canvas2d-toolbar__btn--active' : ''}`}
             onClick={() => setTexPanel(!texPanel)}>
-            🎨 Textures
+            Textures
           </button>
           {(floorTex || wallTex) && (
             <div className="canvas2d-toolbar__tex-tags">
