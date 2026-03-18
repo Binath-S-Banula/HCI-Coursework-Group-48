@@ -1,6 +1,7 @@
+import { useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { AppWindow, DoorOpen, Minus, MousePointer2, Redo2, Square, Undo2 } from 'lucide-react'
-import { setTool } from '../../store/slices/editorSlice'
+import { AppWindow, ChevronDown, DoorOpen, Minus, MousePointer2, Redo2, Square, Undo2 } from 'lucide-react'
+import { setOpeningDesign, setTool } from '../../store/slices/editorSlice'
 
 const tools = [
   { id: 'select',  icon: MousePointer2, label: 'Select',  key: 'V' },
@@ -10,9 +11,38 @@ const tools = [
   { id: 'window',  icon: AppWindow,     label: 'Window',  key: 'N' },
 ]
 
+const openingVariants = {
+  door: [
+    { id: 'single', label: 'Single Door' },
+    { id: 'double', label: 'Double Door' },
+    { id: 'sliding', label: 'Sliding Door' },
+  ],
+  window: [
+    { id: 'casement', label: 'Casement Window' },
+    { id: 'sliding', label: 'Sliding Window' },
+    { id: 'bay', label: 'Bay Window' },
+  ],
+}
+
 export default function EditorToolbar() {
   const dispatch    = useDispatch()
-  const { activeTool, mode } = useSelector((s) => s.editor)
+  const { activeTool, mode, openingDesigns } = useSelector((s) => s.editor)
+  const [expandedTool, setExpandedTool] = useState(null)
+
+  const selectTool = (toolId, isDisabled) => {
+    if (isDisabled) return
+    dispatch(setTool(toolId))
+    if (toolId === 'door' || toolId === 'window') {
+      setExpandedTool((prev) => (prev === toolId ? null : toolId))
+      return
+    }
+    setExpandedTool(null)
+  }
+
+  const selectVariant = (toolId, designId) => {
+    dispatch(setOpeningDesign({ type: toolId, design: designId }))
+    dispatch(setTool(toolId))
+  }
 
   return (
     <aside className="editor-toolbar" aria-label="Editor tools">
@@ -22,22 +52,49 @@ export default function EditorToolbar() {
         const isActive   = activeTool === t.id
         const isDisabled = mode === '3d' && t.id !== 'select'
         const Icon = t.icon
+        const isOpeningTool = t.id === 'door' || t.id === 'window'
+        const isExpanded = expandedTool === t.id && isOpeningTool && !isDisabled
+        const variants = openingVariants[t.id] || []
+        const selectedVariant = openingDesigns?.[t.id]
 
         return (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => !isDisabled && dispatch(setTool(t.id))}
-            title={`${t.label} (${t.key})`}
-            disabled={isDisabled}
-            className={`editor-tool-btn ${isActive ? 'editor-tool-btn--active' : 'editor-tool-btn--inactive'} ${isDisabled ? 'editor-tool-btn--disabled' : ''}`}>
-            <span className="editor-tool-btn__icon" aria-hidden="true">
-              <Icon size={17} strokeWidth={2.1} />
-            </span>
-            <span className="editor-tool-btn__label-wrap">
-              <span className="editor-tool-btn__label">{t.label}</span>
-            </span>
-          </button>
+          <div key={t.id} className="editor-tool-group">
+            <button
+              type="button"
+              onClick={() => selectTool(t.id, isDisabled)}
+              title={`${t.label} (${t.key})`}
+              disabled={isDisabled}
+              className={`editor-tool-btn ${isActive ? 'editor-tool-btn--active' : 'editor-tool-btn--inactive'} ${isDisabled ? 'editor-tool-btn--disabled' : ''}`}>
+              <span className="editor-tool-btn__icon" aria-hidden="true">
+                <Icon size={17} strokeWidth={2.1} />
+              </span>
+              <span className="editor-tool-btn__label-wrap">
+                <span className="editor-tool-btn__label">{t.label}</span>
+              </span>
+              {isOpeningTool && (
+                <span className="editor-tool-btn__caret" aria-hidden="true">
+                  <ChevronDown className={`editor-tool-btn__caret-icon ${isExpanded ? 'editor-tool-btn__caret-icon--open' : ''}`} size={15} strokeWidth={2.5} />
+                </span>
+              )}
+            </button>
+
+            {isExpanded && (
+              <div className="editor-tool-variants" role="listbox" aria-label={`${t.label} designs`}>
+                {variants.map((variant) => {
+                  const isVariantActive = selectedVariant === variant.id
+                  return (
+                    <button
+                      key={variant.id}
+                      type="button"
+                      className={`editor-tool-variant-btn ${isVariantActive ? 'editor-tool-variant-btn--active' : ''}`}
+                      onClick={() => selectVariant(t.id, variant.id)}>
+                      {variant.label}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
         )
       })}
 

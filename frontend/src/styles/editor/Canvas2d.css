@@ -53,13 +53,17 @@
 
 .canvas2d-toolbar__btn-caret {
   line-height: 1;
-  font-size: 11px;
   color: #b8bff1;
-  transform: rotate(0deg);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.canvas2d-toolbar__btn-caret-icon {
   transition: transform .15s ease;
 }
 
-.canvas2d-toolbar__btn-caret--open {
+.canvas2d-toolbar__btn-caret-icon--open {
   transform: rotate(180deg);
 }
 
@@ -109,6 +113,16 @@
   border-radius: 8px;
   padding: 4px 8px;
 }
+.canvas2d-toolbar__actions--selection {
+  margin-left: auto;
+  margin-right: auto;
+  gap: 10px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(108,99,255,0.35);
+  background: linear-gradient(135deg, rgba(108,99,255,0.2), rgba(108,99,255,0.08));
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04);
+}
 .canvas2d-toolbar__hint {
   font-size: 11px;
   color: #c7c3ff;
@@ -116,6 +130,12 @@
 }
 .canvas2d-toolbar__hint--teal { color: #43d9ad; }
 .canvas2d-toolbar__hint--dim  { color: #d8dced; }
+.canvas2d-toolbar__hint--selection {
+  color: #eef0ff;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
 
 .canvas2d-toolbar__action-btn {
   padding: 3px 8px; border-radius: 6px; cursor: pointer; font-size: 11px;
@@ -127,6 +147,21 @@
 .canvas2d-toolbar__action-btn--red {
   border: 1px solid rgba(255,100,100,0.3);
   background: rgba(255,100,100,0.08); color: #ff6b6b;
+}
+.canvas2d-toolbar__action-btn--selection-delete {
+  min-height: 26px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border-color: rgba(239,68,68,0.42);
+  background: rgba(239,68,68,0.14);
+  color: #fecaca;
+  font-weight: 700;
+  transition: all .15s;
+}
+.canvas2d-toolbar__action-btn--selection-delete:hover {
+  border-color: rgba(239,68,68,0.62);
+  background: rgba(239,68,68,0.24);
+  color: #ffe4e6;
 }
 
 /* ── Texture / Color Panel ────────────────────────────────────────── */
@@ -236,4 +271,5 @@
   flex: 1; width: 100%; display: block;
 }
 .canvas2d-canvas--wall    { cursor: crosshair; }
+.canvas2d-canvas--opening { cursor: copy; }
 .canvas2d-canvas--default { cursor: default; }

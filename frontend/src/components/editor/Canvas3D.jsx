@@ -2,6 +2,7 @@ import { Suspense, useEffect, useState, useMemo, useRef } from 'react'
 import { Canvas, useLoader, useThree, useFrame } from '@react-three/fiber'
 import { OrbitControls, Environment, Grid, Box, Plane, Sky, ContactShadows, useTexture, useGLTF, Clone } from '@react-three/drei'
 import { useDispatch, useSelector } from 'react-redux'
+import { ChevronDown } from 'lucide-react'
 import * as THREE from 'three'
 import { setLightIntensity, setTimeOfDay } from '../../store/slices/editorSlice'
 import '../../styles/editor/Canvas3D.css'
@@ -101,7 +102,7 @@ function getSceneCenter(walls, floor) {
 
 
 // ── Beautiful Window 3D component ───────────────────────────────────────────
-function Window3D({ gmx, gmz, gLen, angle, wallColor }) {
+function Window3D({ gmx, gmz, gLen, angle, wallColor, design = 'casement' }) {
   const fw  = 0.06   // frame width
   const fd  = 0.12   // frame depth
   const sillY = 0.85 // window bottom
@@ -146,23 +147,45 @@ function Window3D({ gmx, gmz, gLen, angle, wallColor }) {
         <meshStandardMaterial color="#ffffff" roughness={0.3} />
       </Box>
 
-      {/* Center mullion (vertical divider) */}
-      <Box args={[fw*0.7, winH, fd*0.8]} position={[0, sillY + winH/2, 0]}>
-        <meshStandardMaterial color="#f0f0f0" roughness={0.3} />
-      </Box>
-      {/* Center rail (horizontal divider) */}
-      <Box args={[gLen, fw*0.7, fd*0.8]} position={[0, sillY + winH*0.52, 0]}>
-        <meshStandardMaterial color="#f0f0f0" roughness={0.3} />
-      </Box>
+      {design !== 'sliding' && (
+        <>
+          {/* Center mullion (vertical divider) */}
+          <Box args={[fw*0.7, winH, fd*0.8]} position={[0, sillY + winH/2, 0]}>
+            <meshStandardMaterial color="#f0f0f0" roughness={0.3} />
+          </Box>
+          {/* Center rail (horizontal divider) */}
+          <Box args={[gLen, fw*0.7, fd*0.8]} position={[0, sillY + winH*0.52, 0]}>
+            <meshStandardMaterial color="#f0f0f0" roughness={0.3} />
+          </Box>
+        </>
+      )}
 
-      {/* Glass pane — left panel */}
-      <Box args={[gLen/2 - fw*0.9, winH - fw*0.8, 0.025]} position={[-gLen/4 - fw*0.1, sillY + winH/2, 0.01]}>
-        <meshPhysicalMaterial color="#c8e8f8" transparent opacity={0.25} roughness={0} metalness={0.05} reflectivity={0.9} />
-      </Box>
-      {/* Glass pane — right panel */}
-      <Box args={[gLen/2 - fw*0.9, winH - fw*0.8, 0.025]} position={[gLen/4 + fw*0.1, sillY + winH/2, 0.01]}>
-        <meshPhysicalMaterial color="#c8e8f8" transparent opacity={0.25} roughness={0} metalness={0.05} reflectivity={0.9} />
-      </Box>
+      {design === 'bay' ? (
+        <>
+          {/* Bay center panel */}
+          <Box args={[gLen*0.5, winH - fw*0.8, 0.025]} position={[0, sillY + winH/2, 0.02]}>
+            <meshPhysicalMaterial color="#c8e8f8" transparent opacity={0.24} roughness={0} metalness={0.05} reflectivity={0.9} />
+          </Box>
+          {/* Bay side glass facets */}
+          <Box args={[gLen*0.22, winH - fw, 0.025]} position={[-gLen*0.34, sillY + winH/2, 0.06]} rotation={[0, 0.38, 0]}>
+            <meshPhysicalMaterial color="#c8e8f8" transparent opacity={0.22} roughness={0} metalness={0.05} reflectivity={0.9} />
+          </Box>
+          <Box args={[gLen*0.22, winH - fw, 0.025]} position={[gLen*0.34, sillY + winH/2, 0.06]} rotation={[0, -0.38, 0]}>
+            <meshPhysicalMaterial color="#c8e8f8" transparent opacity={0.22} roughness={0} metalness={0.05} reflectivity={0.9} />
+          </Box>
+        </>
+      ) : (
+        <>
+          {/* Glass pane — left panel */}
+          <Box args={[gLen/2 - fw*0.9, winH - fw*0.8, 0.025]} position={[-gLen/4 - fw*0.1, sillY + winH/2, design === 'sliding' ? 0.02 : 0.01]}>
+            <meshPhysicalMaterial color="#c8e8f8" transparent opacity={0.25} roughness={0} metalness={0.05} reflectivity={0.9} />
+          </Box>
+          {/* Glass pane — right panel */}
+          <Box args={[gLen/2 - fw*0.9, winH - fw*0.8, 0.025]} position={[gLen/4 + fw*0.1, sillY + winH/2, design === 'sliding' ? -0.005 : 0.01]}>
+            <meshPhysicalMaterial color="#c8e8f8" transparent opacity={0.25} roughness={0} metalness={0.05} reflectivity={0.9} />
+          </Box>
+        </>
+      )}
 
       {/* Window sill ledge (exterior protrusion) */}
       <Box args={[gLen + fw*3, 0.05, fd*2.5]} position={[0, sillY - fw - 0.025, fd*0.7]} castShadow receiveShadow>
@@ -237,7 +260,7 @@ function DoubleDoorLeaf({ halfW, doorH, isOpen, side }) {
   )
 }
 
-function Door3D({ gmx, gmz, gLen, angle, wallColor }) {
+function Door3D({ gmx, gmz, gLen, angle, wallColor, design = 'double' }) {
   const fw    = 0.06
   const fd    = 0.15
   const wt    = 0.15   // wall thickness
@@ -246,6 +269,87 @@ function Door3D({ gmx, gmz, gLen, angle, wallColor }) {
   const wc    = wallColor || '#e8e2d8'
   const halfW = gLen / 2
   const [isOpen, setIsOpen] = useState(false)
+
+  if (design === 'single') {
+    return (
+      <group position={[gmx, 0, gmz]} rotation={rot}>
+        <Box args={[gLen + wt*2, WALL_HEIGHT - doorH, wt]}
+          position={[0, doorH + (WALL_HEIGHT - doorH) / 2, 0]}
+          castShadow receiveShadow>
+          <meshStandardMaterial color={wc} roughness={0.85} side={THREE.DoubleSide} />
+        </Box>
+
+        <Box args={[wt, doorH, wt]} position={[-halfW - wt/2, doorH/2, 0]} castShadow receiveShadow>
+          <meshStandardMaterial color={wc} roughness={0.85} side={THREE.DoubleSide} />
+        </Box>
+        <Box args={[wt, doorH, wt]} position={[halfW + wt/2, doorH/2, 0]} castShadow receiveShadow>
+          <meshStandardMaterial color={wc} roughness={0.85} side={THREE.DoubleSide} />
+        </Box>
+
+        <Box args={[gLen + fw*2, fw, fd]} position={[0, doorH + fw/2, 0]} castShadow>
+          <meshStandardMaterial color="#d4c4a8" roughness={0.4} />
+        </Box>
+        <Box args={[fw, doorH, fd]} position={[-halfW - fw/2, doorH/2, 0]} castShadow>
+          <meshStandardMaterial color="#d4c4a8" roughness={0.4} />
+        </Box>
+        <Box args={[fw, doorH, fd]} position={[halfW + fw/2, doorH/2, 0]} castShadow>
+          <meshStandardMaterial color="#d4c4a8" roughness={0.4} />
+        </Box>
+
+        <Box args={[gLen - 0.02, doorH - 0.04, 0.06]} position={[0, doorH/2, 0]} castShadow receiveShadow>
+          <meshStandardMaterial color="#c8a878" roughness={0.6} />
+        </Box>
+        <Box args={[gLen*0.72, doorH*0.34, 0.022]} position={[0, doorH*0.68, 0.041]} castShadow>
+          <meshStandardMaterial color="#b89455" roughness={0.55} />
+        </Box>
+        <Box args={[gLen*0.72, doorH*0.26, 0.022]} position={[0, doorH*0.28, 0.041]} castShadow>
+          <meshStandardMaterial color="#b89455" roughness={0.55} />
+        </Box>
+        <Box args={[0.045, 0.045, 0.09]} position={[gLen*0.38, doorH*0.46, 0.06]} castShadow>
+          <meshStandardMaterial color="#d4a820" roughness={0.05} metalness={0.95} />
+        </Box>
+      </group>
+    )
+  }
+
+  if (design === 'sliding') {
+    return (
+      <group position={[gmx, 0, gmz]} rotation={rot}>
+        <Box args={[gLen + wt*2, WALL_HEIGHT - doorH, wt]}
+          position={[0, doorH + (WALL_HEIGHT - doorH) / 2, 0]}
+          castShadow receiveShadow>
+          <meshStandardMaterial color={wc} roughness={0.85} side={THREE.DoubleSide} />
+        </Box>
+
+        <Box args={[wt, doorH, wt]} position={[-halfW - wt/2, doorH/2, 0]} castShadow receiveShadow>
+          <meshStandardMaterial color={wc} roughness={0.85} side={THREE.DoubleSide} />
+        </Box>
+        <Box args={[wt, doorH, wt]} position={[halfW + wt/2, doorH/2, 0]} castShadow receiveShadow>
+          <meshStandardMaterial color={wc} roughness={0.85} side={THREE.DoubleSide} />
+        </Box>
+
+        <Box args={[gLen + fw*2, fw, fd]} position={[0, doorH + fw/2, 0]} castShadow>
+          <meshStandardMaterial color="#d4c4a8" roughness={0.4} />
+        </Box>
+        <Box args={[fw, doorH, fd]} position={[-halfW - fw/2, doorH/2, 0]} castShadow>
+          <meshStandardMaterial color="#d4c4a8" roughness={0.4} />
+        </Box>
+        <Box args={[fw, doorH, fd]} position={[halfW + fw/2, doorH/2, 0]} castShadow>
+          <meshStandardMaterial color="#d4c4a8" roughness={0.4} />
+        </Box>
+
+        <Box args={[gLen*0.54, doorH - 0.06, 0.045]} position={[-gLen*0.13, doorH/2, 0.025]} castShadow receiveShadow>
+          <meshPhysicalMaterial color="#c8e8f8" transparent opacity={0.25} roughness={0} metalness={0.05} reflectivity={0.9} />
+        </Box>
+        <Box args={[gLen*0.54, doorH - 0.06, 0.045]} position={[gLen*0.13, doorH/2, -0.015]} castShadow receiveShadow>
+          <meshPhysicalMaterial color="#c8e8f8" transparent opacity={0.25} roughness={0} metalness={0.05} reflectivity={0.9} />
+        </Box>
+        <Box args={[0.06, 0.015, 0.03]} position={[-gLen*0.04, doorH*0.45, 0.05]} castShadow>
+          <meshStandardMaterial color="#d4a820" roughness={0.2} metalness={0.8} />
+        </Box>
+      </group>
+    )
+  }
 
   return (
     <group position={[gmx, 0, gmz]} rotation={rot}>
@@ -352,11 +456,12 @@ function Wall3D({ wall, wallTexUrl, wallColor, cx, cz, openings }) {
     const gLen = Math.sqrt((gx2-gx1)**2 + (gz2-gz1)**2)
     const gmx = (gx1+gx2)/2, gmz = (gz1+gz2)/2
     const angle = Math.atan2(dz, dx)
+    const design = op.design || (op.type === 'window' ? 'casement' : 'double')
 
     if (op.type === 'window') {
-      segments.push({ window3d: true, gmx, gmz, gLen, angle })
+      segments.push({ window3d: true, gmx, gmz, gLen, angle, design })
     } else {
-      segments.push({ door3d: true, gmx, gmz, gLen, angle })
+      segments.push({ door3d: true, gmx, gmz, gLen, angle, design })
     }
     prevT = t2
   })
@@ -370,8 +475,8 @@ function Wall3D({ wall, wallTexUrl, wallColor, cx, cz, openings }) {
           const bx = sx0 + dx * seg.t2, bz = sz0 + dz * seg.t2
           return <WallSegment key={i} sx={ax} sz={az} ex={bx} ez={bz} wallTexUrl={wallTexUrl} wallColor={wallColor} />
         }
-        if (seg.window3d) return <Window3D key={i} gmx={seg.gmx} gmz={seg.gmz} gLen={seg.gLen} angle={seg.angle} wallColor={wallColor} />
-        if (seg.door3d)   return <Door3D   key={i} gmx={seg.gmx} gmz={seg.gmz} gLen={seg.gLen} angle={seg.angle} wallColor={wallColor} />
+        if (seg.window3d) return <Window3D key={i} gmx={seg.gmx} gmz={seg.gmz} gLen={seg.gLen} angle={seg.angle} wallColor={wallColor} design={seg.design} />
+        if (seg.door3d)   return <Door3D   key={i} gmx={seg.gmx} gmz={seg.gmz} gLen={seg.gLen} angle={seg.angle} wallColor={wallColor} design={seg.design} />
         return null
       })}
     </group>
@@ -790,9 +895,17 @@ function LiveRoom({ walls, floor, placed, openings, wallTexUrl, floorTexUrl, wal
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function Canvas3D() {
   const dispatch = useDispatch()
+  const mode = useSelector((s) => s.editor.mode)
   const lightIntensity = useSelector((s) => s.editor.lightIntensity)
   const timeOfDay = useSelector((s) => s.editor.timeOfDay)
   const [liveData, setLiveData] = useState({ walls: [], floor: null, placed: [], openings: [], floorTex: null, floorColor: '#f5f2ee', wallTex: null, wallColor: '#e8e2d8' })
+  const [isShadingMinimized, setIsShadingMinimized] = useState(true)
+
+  useEffect(() => {
+    if (mode === '3d') {
+      setIsShadingMinimized(true)
+    }
+  }, [mode])
 
   useEffect(() => {
     const persisted = Number(window.__editorLightIntensity)
@@ -916,42 +1029,57 @@ export default function Canvas3D() {
         <span>🖲 Scroll to zoom</span>
       </div>
 
-      <div className="canvas3d-lighting">
+      <div className={`canvas3d-lighting ${isShadingMinimized ? 'canvas3d-lighting--collapsed' : ''}`}>
         <div className="canvas3d-lighting__header">
           <label htmlFor="canvas3d-light-intensity" className="canvas3d-lighting__label">Shading</label>
-          <span className="canvas3d-lighting__chip">{normalizeTimeOfDay(timeOfDay)}</span>
-        </div>
-        <div className="canvas3d-lighting__presets">
-          {[
-            { id: 'morning', label: 'Morning' },
-            { id: 'day', label: 'Day' },
-            { id: 'evening', label: 'Evening' },
-            { id: 'night', label: 'Night' },
-          ].map((presetItem) => (
+          <div className="canvas3d-lighting__header-right">
+            <span className="canvas3d-lighting__chip">{normalizeTimeOfDay(timeOfDay)}</span>
             <button
-              key={presetItem.id}
               type="button"
-              onClick={() => dispatch(setTimeOfDay(presetItem.id))}
-              className={`canvas3d-lighting__preset-btn ${timeOfDay === presetItem.id ? 'canvas3d-lighting__preset-btn--active' : ''}`}
+              className="canvas3d-lighting__toggle"
+              onClick={() => setIsShadingMinimized((prev) => !prev)}
+              aria-label={isShadingMinimized ? 'Expand shading panel' : 'Collapse shading panel'}
+              aria-expanded={!isShadingMinimized}
             >
-              {presetItem.label}
+              <ChevronDown className={`canvas3d-lighting__toggle-icon ${isShadingMinimized ? '' : 'canvas3d-lighting__toggle-icon--open'}`} size={15} strokeWidth={2.6} />
             </button>
-          ))}
+          </div>
         </div>
-        <div className="canvas3d-lighting__intensity-row">
-          <span className="canvas3d-lighting__intensity-label">Intensity</span>
-          <input
-            id="canvas3d-light-intensity"
-            type="range"
-            min={MIN_LIGHT_INTENSITY}
-            max={MAX_LIGHT_INTENSITY}
-            step={0.05}
-            value={lightIntensity}
-            onChange={(e) => dispatch(setLightIntensity(Number(e.target.value)))}
-            className="canvas3d-lighting__slider"
-          />
-          <span className="canvas3d-lighting__value">{Math.round(lightIntensity * 100)}%</span>
-        </div>
+        {!isShadingMinimized && (
+          <>
+            <div className="canvas3d-lighting__presets">
+              {[
+                { id: 'morning', label: 'Morning' },
+                { id: 'day', label: 'Day' },
+                { id: 'evening', label: 'Evening' },
+                { id: 'night', label: 'Night' },
+              ].map((presetItem) => (
+                <button
+                  key={presetItem.id}
+                  type="button"
+                  onClick={() => dispatch(setTimeOfDay(presetItem.id))}
+                  className={`canvas3d-lighting__preset-btn ${timeOfDay === presetItem.id ? 'canvas3d-lighting__preset-btn--active' : ''}`}
+                >
+                  {presetItem.label}
+                </button>
+              ))}
+            </div>
+            <div className="canvas3d-lighting__intensity-row">
+              <span className="canvas3d-lighting__intensity-label">Intensity</span>
+              <input
+                id="canvas3d-light-intensity"
+                type="range"
+                min={MIN_LIGHT_INTENSITY}
+                max={MAX_LIGHT_INTENSITY}
+                step={0.05}
+                value={lightIntensity}
+                onChange={(e) => dispatch(setLightIntensity(Number(e.target.value)))}
+                className="canvas3d-lighting__slider"
+              />
+              <span className="canvas3d-lighting__value">{Math.round(lightIntensity * 100)}%</span>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Status */}

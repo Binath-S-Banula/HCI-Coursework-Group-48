@@ -3,6 +3,7 @@ import { createSlice } from '@reduxjs/toolkit'
 const initialState = {
   mode:             '2d',       // '2d' | '3d'
   activeTool:       'select',   // 'select'|'wall'|'floor'|'room'|'door'|'window'|'measure'
+  openingDesigns:   { door: 'single', window: 'casement' },
   activeRoomId:     null,
   selectedObjectId: null,
   lightIntensity:   1,
@@ -19,6 +20,12 @@ const editorSlice = createSlice({
   reducers: {
     setMode(state, action)         { state.mode = action.payload },
     setTool(state, action)         { state.activeTool = action.payload; state.selectedObjectId = null },
+    setOpeningDesign(state, action) {
+      const { type, design } = action.payload || {}
+      if ((type === 'door' || type === 'window') && typeof design === 'string' && design.trim()) {
+        state.openingDesigns[type] = design
+      }
+    },
     setActiveRoom(state, action)   { state.activeRoomId = action.payload },
     selectObject(state, action)    { state.selectedObjectId = action.payload },
     setLightIntensity(state, action) {
@@ -39,7 +46,7 @@ const editorSlice = createSlice({
 })
 
 export const {
-  setMode, setTool, setActiveRoom, selectObject,
+  setMode, setTool, setOpeningDesign, setActiveRoom, selectObject,
   setLightIntensity, setTimeOfDay, setZoom, setPanOffset, toggleGrid, toggleDimensions, resetView,
 } = editorSlice.actions
 

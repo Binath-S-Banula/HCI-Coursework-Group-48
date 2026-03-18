@@ -56,11 +56,20 @@
   backdrop-filter: blur(6px);
   box-shadow: 0 10px 26px rgba(0,0,0,0.32);
 }
+.canvas3d-lighting--collapsed {
+  min-width: 220px;
+  padding: 9px 10px;
+}
 .canvas3d-lighting__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   width: 100%;
+}
+.canvas3d-lighting__header-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 .canvas3d-lighting__label {
   font-size: 12px;
@@ -76,6 +85,31 @@
   border: 1px solid rgba(108,99,255,0.38);
   border-radius: 999px;
   padding: 3px 8px;
+}
+.canvas3d-lighting__toggle {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.05);
+  color: #ecebfd;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .15s ease;
+}
+.canvas3d-lighting__toggle:hover {
+  border-color: rgba(108,99,255,0.45);
+  background: rgba(108,99,255,0.16);
+}
+.canvas3d-lighting__toggle-icon {
+  transition: transform .15s ease;
+}
+.canvas3d-lighting__toggle-icon--open {
+  transform: rotate(180deg);
 }
 .canvas3d-lighting__presets {
   display: flex;
