@@ -206,17 +206,22 @@ function Window3D({ gmx, gmz, gLen, angle, wallColor, design = 'casement' }) {
 }
 
 // ── Single Door leaf — hinged on one side ────────────────────────────────────
-function SingleDoorLeaf({ doorW, doorH, isOpen, inwardSign = -1 }) {
+function SingleDoorLeaf({ doorW, doorH, isOpen, swingSign = -1, hinge = 'left' }) {
   const groupRef = useRef()
-  const openAngle = -inwardSign * (Math.PI / 2)
-  const handleZ = -inwardSign * 0.06
+  const hingeSide = hinge === 'right' ? 'right' : 'left'
+  const baseOpenAngle = -swingSign * (Math.PI / 2)
+  const openAngle = hingeSide === 'left' ? baseOpenAngle : -baseOpenAngle
+  const handleZ = -swingSign * 0.06
+  const handleX = hingeSide === 'left' ? (doorW * 0.38) : (-doorW * 0.38)
+  const pivotX = hingeSide === 'left' ? (-doorW / 2) : (doorW / 2)
+  const leafOffsetX = hingeSide === 'left' ? (doorW / 2) : (-doorW / 2)
   const closedAngle = 0
   const targetRef = useRef(isOpen ? openAngle : closedAngle)
   const currentRef = useRef(isOpen ? openAngle : closedAngle)
 
   useEffect(() => {
     targetRef.current = isOpen ? openAngle : closedAngle
-  }, [isOpen])
+  }, [isOpen, openAngle])
 
   useFrame(() => {
     if (!groupRef.current) return
@@ -227,8 +232,8 @@ function SingleDoorLeaf({ doorW, doorH, isOpen, inwardSign = -1 }) {
   })
 
   return (
-    <group ref={groupRef} position={[-doorW / 2, 0, 0]}>
-      <group position={[doorW / 2, 0, 0]}>
+    <group ref={groupRef} position={[pivotX, 0, 0]}>
+      <group position={[leafOffsetX, 0, 0]}>
         <Box args={[doorW - 0.02, doorH - 0.04, 0.06]} position={[0, doorH / 2, 0]} castShadow receiveShadow>
           <meshStandardMaterial color="#c8a878" roughness={0.6} />
         </Box>
@@ -238,7 +243,7 @@ function SingleDoorLeaf({ doorW, doorH, isOpen, inwardSign = -1 }) {
         <Box args={[doorW * 0.72, doorH * 0.26, 0.022]} position={[0, doorH * 0.28, 0.041]} castShadow>
           <meshStandardMaterial color="#b89455" roughness={0.55} />
         </Box>
-        <Box args={[0.045, 0.045, 0.09]} position={[doorW * 0.38, doorH * 0.46, handleZ]} castShadow>
+        <Box args={[0.045, 0.045, 0.09]} position={[handleX, doorH * 0.46, handleZ]} castShadow>
           <meshStandardMaterial color="#d4a820" roughness={0.05} metalness={0.95} />
         </Box>
       </group>
@@ -247,18 +252,18 @@ function SingleDoorLeaf({ doorW, doorH, isOpen, inwardSign = -1 }) {
 }
 
 // ── Double Door 3D — two leaves swinging inward ──────────────────────────────
-function DoubleDoorLeaf({ halfW, doorH, isOpen, side, inwardSign = -1 }) {
+function DoubleDoorLeaf({ halfW, doorH, isOpen, side, swingSign = -1 }) {
   const groupRef   = useRef()
   const baseAngle = side === 'left' ? 1 : -1
-  const openAngle   = baseAngle * (-inwardSign) * (Math.PI / 2)
-  const handleZ = -inwardSign * 0.06
+  const openAngle   = baseAngle * (-swingSign) * (Math.PI / 2)
+  const handleZ = -swingSign * 0.06
   const closedAngle = 0
   const targetRef  = useRef(isOpen ? openAngle : closedAngle)
   const currentRef = useRef(isOpen ? openAngle : closedAngle)
 
   useEffect(() => {
     targetRef.current = isOpen ? openAngle : closedAngle
-  }, [isOpen])
+  }, [isOpen, openAngle])
 
   useFrame(() => {
     if (!groupRef.current) return
@@ -312,7 +317,7 @@ function DoubleDoorLeaf({ halfW, doorH, isOpen, side, inwardSign = -1 }) {
   )
 }
 
-function Door3D({ gmx, gmz, gLen, angle, wallColor, design = 'double', inwardSign = -1 }) {
+function Door3D({ gmx, gmz, gLen, angle, wallColor, design = 'double', inwardSign = -1, openTo = 'inside', hinge = 'left' }) {
   const fw    = 0.06
   const fd    = WALL_THICKNESS
   const wt    = WALL_THICKNESS   // wall thickness
@@ -320,6 +325,7 @@ function Door3D({ gmx, gmz, gLen, angle, wallColor, design = 'double', inwardSig
   const rot   = [0, -angle, 0]
   const wc    = wallColor || '#e8e2d8'
   const halfW = gLen / 2
+  const swingSign = openTo === 'outside' ? -inwardSign : inwardSign
   const [isOpen, setIsOpen] = useState(false)
 
   if (design === 'single') {
@@ -348,7 +354,7 @@ function Door3D({ gmx, gmz, gLen, angle, wallColor, design = 'double', inwardSig
           <meshStandardMaterial color="#d4c4a8" roughness={0.4} />
         </Box>
 
-        <SingleDoorLeaf doorW={gLen} doorH={doorH} isOpen={isOpen} inwardSign={inwardSign} />
+        <SingleDoorLeaf doorW={gLen} doorH={doorH} isOpen={isOpen} swingSign={swingSign} hinge={hinge} />
 
         <Box args={[gLen, 0.025, fd * 1.3]} position={[0, 0.012, 0]} receiveShadow>
           <meshStandardMaterial color="#b0a090" roughness={0.35} metalness={0.25} />
@@ -443,9 +449,9 @@ function Door3D({ gmx, gmz, gLen, angle, wallColor, design = 'double', inwardSig
       </Box>
 
       {/* Left leaf — hinged at left, swings inward */}
-      <DoubleDoorLeaf halfW={halfW} doorH={doorH} isOpen={isOpen} side="left" inwardSign={inwardSign} />
+      <DoubleDoorLeaf halfW={halfW} doorH={doorH} isOpen={isOpen} side="left" swingSign={swingSign} />
       {/* Right leaf — hinged at right, swings inward */}
-      <DoubleDoorLeaf halfW={halfW} doorH={doorH} isOpen={isOpen} side="right" inwardSign={inwardSign} />
+      <DoubleDoorLeaf halfW={halfW} doorH={doorH} isOpen={isOpen} side="right" swingSign={swingSign} />
 
       {/* Threshold */}
       <Box args={[gLen, 0.025, fd * 1.3]} position={[0, 0.012, 0]} receiveShadow>
@@ -524,7 +530,17 @@ function Wall3D({ wall, wallTexUrl, wallColor, cx, cz, openings }) {
     if (op.type === 'window') {
       segments.push({ window3d: true, gmx, gmz, gLen, angle, design })
     } else {
-      segments.push({ door3d: true, gmx, gmz, gLen, angle, design, inwardSign })
+      segments.push({
+        door3d: true,
+        gmx,
+        gmz,
+        gLen,
+        angle,
+        design,
+        inwardSign,
+        openTo: op.openTo || 'inside',
+        hinge: op.hinge || 'left',
+      })
     }
     prevT = t2
   })
@@ -539,7 +555,9 @@ function Wall3D({ wall, wallTexUrl, wallColor, cx, cz, openings }) {
           return <WallSegment key={i} sx={ax} sz={az} ex={bx} ez={bz} wallTexUrl={wallTexUrl} wallColor={wallColor} />
         }
         if (seg.window3d) return <Window3D key={i} gmx={seg.gmx} gmz={seg.gmz} gLen={seg.gLen} angle={seg.angle} wallColor={wallColor} design={seg.design} />
-        if (seg.door3d)   return <Door3D   key={i} gmx={seg.gmx} gmz={seg.gmz} gLen={seg.gLen} angle={seg.angle} wallColor={wallColor} design={seg.design} inwardSign={seg.inwardSign} />
+        if (seg.door3d) {
+          return <Door3D key={i} gmx={seg.gmx} gmz={seg.gmz} gLen={seg.gLen} angle={seg.angle} wallColor={wallColor} design={seg.design} inwardSign={seg.inwardSign} openTo={seg.openTo} hinge={seg.hinge} />
+        }
         return null
       })}
     </group>

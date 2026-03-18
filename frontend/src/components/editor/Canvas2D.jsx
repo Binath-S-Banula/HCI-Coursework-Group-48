@@ -593,6 +593,9 @@ export default function Canvas2D({ onDesignChange }) {
       const cx = wall.start.x + dx*op.t
       const cy = wall.start.y + dy*op.t
       const inwardSign = roomCenter && (((roomCenter.x - cx) * nx + (roomCenter.y - cy) * ny) < 0) ? -1 : 1
+      const openTo = op.openTo === 'outside' ? 'outside' : 'inside'
+      const hinge = op.hinge === 'right' ? 'right' : 'left'
+      const swingSign = openTo === 'inside' ? inwardSign : -inwardSign
       const isSel = selectedOpening === op.id
 
       // Clear the wall gap — draw floor color over wall
@@ -640,18 +643,18 @@ export default function Canvas2D({ onDesignChange }) {
           const rightHx = cx + ux * W2
           const rightHy = cy + uy * W2
           const leftStart = wallAngle
-          const leftEnd = wallAngle + inwardSign * (Math.PI / 2)
+          const leftEnd = wallAngle + swingSign * (Math.PI / 2)
           const rightStart = wallAngle + Math.PI
-          const rightEnd = rightStart - inwardSign * (Math.PI / 2)
+          const rightEnd = rightStart - swingSign * (Math.PI / 2)
 
           ctx.strokeStyle = isSel ? 'rgba(108,99,255,0.5)' : 'rgba(45,106,79,0.4)'
           ctx.lineWidth = 1
           ctx.setLineDash([3, 3])
           ctx.beginPath()
-          ctx.arc(leftHx, leftHy, W2, leftStart, leftEnd, inwardSign < 0)
+          ctx.arc(leftHx, leftHy, W2, leftStart, leftEnd, swingSign < 0)
           ctx.stroke()
           ctx.beginPath()
-          ctx.arc(rightHx, rightHy, W2, rightStart, rightEnd, inwardSign > 0)
+          ctx.arc(rightHx, rightHy, W2, rightStart, rightEnd, swingSign > 0)
           ctx.stroke()
           ctx.setLineDash([])
         } else if (design === 'sliding') {
@@ -680,9 +683,11 @@ export default function Canvas2D({ onDesignChange }) {
           ctx.setLineDash([3, 3])
           ctx.beginPath()
           const wallAngle = Math.atan2(uy, ux)
-          const startAngle = wallAngle
-          const endAngle = wallAngle + inwardSign * (Math.PI / 2)
-          ctx.arc(cx - ux * W2, cy - uy * W2, openingWidth, startAngle, endAngle, inwardSign < 0)
+          const hingeX = hinge === 'left' ? (cx - ux * W2) : (cx + ux * W2)
+          const hingeY = hinge === 'left' ? (cy - uy * W2) : (cy + uy * W2)
+          const startAngle = hinge === 'left' ? wallAngle : (wallAngle + Math.PI)
+          const endAngle = startAngle + swingSign * (Math.PI / 2)
+          ctx.arc(hingeX, hingeY, openingWidth, startAngle, endAngle, swingSign < 0)
           ctx.stroke()
           ctx.setLineDash([])
         }
@@ -916,6 +921,7 @@ export default function Canvas2D({ onDesignChange }) {
           type: activeTool,
           design: preset ? selectedDesign : (activeTool === 'door' ? 'single' : 'casement'),
           width: preset?.width || (activeTool === 'door' ? 90 : 120),
+          ...(activeTool === 'door' ? { openTo: 'inside', hinge: 'left' } : {}),
         }
         const newOpenings = [...openingsRef.current, newOpening]
         pushHistory(wallsRef.current, placedRef.current, newOpenings)
@@ -1326,6 +1332,19 @@ export default function Canvas2D({ onDesignChange }) {
   const selItem = placed.find(p => p.id === selectedItem)
   const selOpening = openings.find((opening) => opening.id === selectedOpening)
 
+  const updateSelectedDoorOption = (field, value) => {
+    if (!selectedOpening) return
+    const currentOpening = openingsRef.current.find((opening) => opening.id === selectedOpening)
+    if (!currentOpening || currentOpening.type !== 'door') return
+    if (currentOpening[field] === value) return
+
+    const nextOpenings = openingsRef.current.map((opening) =>
+      opening.id === selectedOpening ? { ...opening, [field]: value } : opening
+    )
+
+    pushHistory(wallsRef.current, placedRef.current, nextOpenings)
+  }
+
   return (
     <div className="canvas2d-root" ref={rootRef}>
 
@@ -1389,10 +1408,53 @@ export default function Canvas2D({ onDesignChange }) {
           )}
 
           {selectedOpening && !selItem && !selectedWall && (
-            <div className="canvas2d-toolbar__actions canvas2d-toolbar__actions--selection">
+            <div className={`canvas2d-toolbar__actions canvas2d-toolbar__actions--selection${selOpening?.type === 'door' ? ' canvas2d-toolbar__actions--door' : ''}`}>
               <span className="canvas2d-toolbar__hint canvas2d-toolbar__hint--selection">
                 {selOpening?.type === 'door' ? 'Door selected' : 'Window selected'}
               </span>
+
+              {selOpening?.type === 'door' && (
+                <>
+                  <div className="canvas2d-toolbar__door-group">
+                    <span className="canvas2d-toolbar__door-label">Swing</span>
+                    <div className="canvas2d-toolbar__door-toggle" role="group" aria-label="Door swing direction">
+                      <button
+                        type="button"
+                        className={`canvas2d-toolbar__door-btn${(selOpening.openTo || 'inside') === 'inside' ? ' canvas2d-toolbar__door-btn--active' : ''}`}
+                        onClick={() => updateSelectedDoorOption('openTo', 'inside')}>
+                        Inside
+                      </button>
+                      <button
+                        type="button"
+                        className={`canvas2d-toolbar__door-btn${selOpening.openTo === 'outside' ? ' canvas2d-toolbar__door-btn--active' : ''}`}
+                        onClick={() => updateSelectedDoorOption('openTo', 'outside')}>
+                        Outside
+                      </button>
+                    </div>
+                  </div>
+
+                  {selOpening.design !== 'sliding' && (
+                    <div className="canvas2d-toolbar__door-group">
+                      <span className="canvas2d-toolbar__door-label">Hinge</span>
+                      <div className="canvas2d-toolbar__door-toggle" role="group" aria-label="Door hinge side">
+                        <button
+                          type="button"
+                          className={`canvas2d-toolbar__door-btn${(selOpening.hinge || 'left') === 'left' ? ' canvas2d-toolbar__door-btn--active' : ''}`}
+                          onClick={() => updateSelectedDoorOption('hinge', 'left')}>
+                          Left
+                        </button>
+                        <button
+                          type="button"
+                          className={`canvas2d-toolbar__door-btn${selOpening.hinge === 'right' ? ' canvas2d-toolbar__door-btn--active' : ''}`}
+                          onClick={() => updateSelectedDoorOption('hinge', 'right')}>
+                          Right
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
               <button onClick={deleteSelectedOpening}
                 className="canvas2d-toolbar__action-btn canvas2d-toolbar__action-btn--red canvas2d-toolbar__action-btn--selection-delete">🗑 Delete</button>
             </div>
