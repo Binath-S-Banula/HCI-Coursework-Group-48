@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { login, logout } from "../store/slices/authSlice";
 import { Settings, ShieldAlert, Lock, ArrowRight } from "lucide-react";
+import logoImage from "../uploads/homeland-logo.png";
 import "../styles/pages/AdminLoginPage.css";
 
 const schema = z.object({
@@ -45,7 +46,7 @@ export default function AdminLoginPage() {
     <div className="admin-login-page">
       <div className="admin-login-box">
         <div className="admin-login-logo-wrap">
-          <div className="admin-login-logo"><Settings size={28} /></div>
+          <img src={logoImage} alt="HomePlan3D Logo" className="admin-login-logo" />
           <h1>Admin Portal</h1>
           <p>HomePlan3D — Restricted Access</p>
         </div>
