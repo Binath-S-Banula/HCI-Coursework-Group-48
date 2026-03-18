@@ -1351,22 +1351,32 @@ export default function Canvas2D({ onDesignChange }) {
           </button>
 
           {selItem && (
-            <div className="canvas2d-toolbar__actions">
-              <span className="canvas2d-toolbar__hint">
-                {selItem.name} · {worldToCm(selItem.w)}×{worldToCm(selItem.h)}cm
-              </span>
-              <label className="canvas2d-toolbar__hint" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                Color
+            <div className="canvas2d-toolbar__actions canvas2d-toolbar__actions--item">
+              <div className="canvas2d-toolbar__item-meta">
+                <span className="canvas2d-toolbar__item-name">{selItem.name}</span>
+                <span className="canvas2d-toolbar__item-size">{worldToCm(selItem.w)}×{worldToCm(selItem.h)} cm</span>
+              </div>
+
+              <label className="canvas2d-toolbar__color-control" aria-label="Furniture color">
+                <span className="canvas2d-toolbar__color-label">Color</span>
+                <span
+                  className="canvas2d-toolbar__color-preview"
+                  style={{ background: selItem.color || '#8b6b4a' }}
+                  aria-hidden="true"
+                />
                 <input
                   type="color"
                   value={selItem.color || '#8b6b4a'}
                   onChange={(e) => updateSelectedColor(e.target.value)}
-                  style={{ width: 26, height: 20, padding: 0, border: 'none', background: 'transparent', cursor: 'pointer' }}
+                  className="canvas2d-toolbar__color-input"
                 />
               </label>
-              <button onClick={() => rotateSelected(-Math.PI/2)} className="canvas2d-toolbar__action-btn canvas2d-toolbar__action-btn--purple">↺ 90°</button>
-              <button onClick={() => rotateSelected( Math.PI/2)} className="canvas2d-toolbar__action-btn canvas2d-toolbar__action-btn--purple">↻ 90°</button>
-              <button onClick={deleteSelected} className="canvas2d-toolbar__action-btn canvas2d-toolbar__action-btn--red">🗑 Delete</button>
+
+              <div className="canvas2d-toolbar__item-actions">
+                <button onClick={() => rotateSelected(-Math.PI/2)} className="canvas2d-toolbar__action-btn canvas2d-toolbar__action-btn--purple">↺ 90°</button>
+                <button onClick={() => rotateSelected( Math.PI/2)} className="canvas2d-toolbar__action-btn canvas2d-toolbar__action-btn--purple">↻ 90°</button>
+                <button onClick={deleteSelected} className="canvas2d-toolbar__action-btn canvas2d-toolbar__action-btn--red">🗑 Delete</button>
+              </div>
             </div>
           )}
 
