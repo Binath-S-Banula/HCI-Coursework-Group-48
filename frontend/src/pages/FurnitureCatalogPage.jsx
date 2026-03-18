@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Armchair, Heart, HeartOff, LayoutGrid, List, Paintbrush, Search } from 'lucide-react'
+import { Armchair, Heart, HeartOff, LayoutGrid, List, Paintbrush, Search, Star } from 'lucide-react'
 import { furnitureService } from '../services/furniture.service'
 import '../styles/pages/FurnitureCatalogPage.css'
 
@@ -132,11 +132,42 @@ const CategoryIcon = ({ cat, size = 16 }) => {
   }
 }
 
-const StarRating = ({ rating }) => {
-  const full = Math.floor(rating), half = rating % 1 >= 0.5
+const StarRating = ({ rating, size = 12, className = '' }) => {
+  const normalized = Math.max(0, Math.min(5, Number(rating) || 0))
+  const full = Math.floor(normalized)
+  const half = normalized - full >= 0.5
+
   return (
-    <span className="catalog-card__stars">
-      {'★'.repeat(full)}{half ? '½' : ''}{'☆'.repeat(5 - full - (half?1:0))}
+    <span className={`catalog-star-rating ${className}`.trim()} aria-label={`${normalized} out of 5 stars`}>
+      {Array.from({ length: 5 }, (_, idx) => {
+        const isFull = idx < full
+        const isHalf = idx === full && half
+
+        if (isFull) {
+          return (
+            <span key={idx} className="catalog-star catalog-star--full" aria-hidden="true">
+              <Star size={size} fill="currentColor" strokeWidth={2} />
+            </span>
+          )
+        }
+
+        if (isHalf) {
+          return (
+            <span key={idx} className="catalog-star catalog-star--half" aria-hidden="true">
+              <Star size={size} strokeWidth={2} />
+              <span className="catalog-star__half-fill">
+                <Star size={size} fill="currentColor" strokeWidth={2} />
+              </span>
+            </span>
+          )
+        }
+
+        return (
+          <span key={idx} className="catalog-star catalog-star--empty" aria-hidden="true">
+            <Star size={size} strokeWidth={2} />
+          </span>
+        )
+      })}
     </span>
   )
 }
@@ -301,7 +332,9 @@ export default function FurnitureCatalogPage() {
                           <span className="catalog-card__dims">{item.width}×{item.depth}cm</span>
                         </div>
                     }
-                    <button className="catalog-card__wish-btn" onClick={e => toggleWishlist(e, item.id)}>
+                    <button
+                      className={`catalog-card__wish-btn catalog-card__wish-btn--${wishlist[item.id] ? 'active' : 'inactive'}`}
+                      onClick={e => toggleWishlist(e, item.id)}>
                       {wishlist[item.id]
                         ? <Heart size={14} fill="currentColor" strokeWidth={2.1} />
                         : <HeartOff size={14} strokeWidth={2.1} />
@@ -351,7 +384,7 @@ export default function FurnitureCatalogPage() {
                       {item.isReal && <span className="catalog-list-row__real-badge">REAL</span>}
                     </div>
                     <div className="catalog-list-row__rating-row">
-                      <span className="catalog-list-row__stars">{'★'.repeat(Math.floor(item.rating||4.5))}</span>
+                      <StarRating rating={item.rating || 4.5} size={11} className="catalog-list-row__stars" />
                       <span className="catalog-list-row__reviews">({item.reviews||0})</span>
                       <span className="catalog-list-row__dims">· {item.width}×{item.depth}cm</span>
                     </div>
@@ -385,7 +418,7 @@ export default function FurnitureCatalogPage() {
                 <div>
                   <div className="catalog-modal__title">{selectedItem.name}</div>
                   <div className="catalog-modal__rating-row">
-                    <span className="catalog-modal__stars">{'★'.repeat(Math.floor(selectedItem.rating||4.5))}</span>
+                    <StarRating rating={selectedItem.rating || 4.5} className="catalog-modal__stars" />
                     <span className="catalog-modal__reviews">{selectedItem.reviews||0} reviews</span>
                     <span className="catalog-modal__cat-badge">{selectedItem.category}</span>
                   </div>
@@ -416,7 +449,9 @@ export default function FurnitureCatalogPage() {
                 <button className="catalog-modal__use-btn" onClick={() => handleUseInEditor(selectedItem)}>
                   <Paintbrush size={14} strokeWidth={2.1} /> Use in Editor
                 </button>
-                <button className="catalog-modal__wish-btn" onClick={e => toggleWishlist(e, selectedItem.id)}>
+                <button
+                  className={`catalog-modal__wish-btn catalog-modal__wish-btn--${wishlist[selectedItem.id] ? 'active' : 'inactive'}`}
+                  onClick={e => toggleWishlist(e, selectedItem.id)}>
                   {wishlist[selectedItem.id]
                     ? <Heart size={16} fill="currentColor" strokeWidth={2.1} />
                     : <HeartOff size={16} strokeWidth={2.1} />
