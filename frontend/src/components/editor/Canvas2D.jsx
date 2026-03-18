@@ -897,13 +897,6 @@ export default function Canvas2D({ onDesignChange }) {
             <span className="canvas2d-toolbar__btn-label">Textures</span>
             <span className={`canvas2d-toolbar__btn-caret${texPanel ? ' canvas2d-toolbar__btn-caret--open' : ''}`} aria-hidden="true">▾</span>
           </button>
-          {(floorTex || wallTex) && (
-            <div className="canvas2d-toolbar__tex-tags">
-              {floorTex && <span className="canvas2d-toolbar__tex-tag--floor">Floor: {floorTex.name}</span>}
-              {wallTex  && <span className="canvas2d-toolbar__tex-tag--wall">Wall: {wallTex.name}</span>}
-              <button onClick={() => { setFloorTex(null); setWallTex(null) }} className="canvas2d-toolbar__clear-btn">✕</button>
-            </div>
-          )}
 
           {selItem && (
             <div className="canvas2d-toolbar__actions">
