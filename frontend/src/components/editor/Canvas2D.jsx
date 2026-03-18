@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState, useCallback } from 'react'
+import { ChevronDown } from 'lucide-react'
 import '../../styles/editor/Canvas2D.css'
 import { useSelector } from 'react-redux'
 
@@ -7,7 +8,26 @@ const snap = (v) => Math.round(v / GRID) * GRID
 const HANDLE_R = 6   // corner handle radius (world px)
 const ROT_OFFSET = 28 // rotate handle distance above item
 
+const OPENING_PRESETS = {
+  door: {
+    single: { width: 26, label: 'Single Door' },
+    double: { width: 38, label: 'Double Door' },
+    sliding: { width: 32, label: 'Sliding Door' },
+  },
+  window: {
+    casement: { width: 24, label: 'Casement Window' },
+    sliding: { width: 32, label: 'Sliding Window' },
+    bay: { width: 38, label: 'Bay Window' },
+  },
+}
+
 const getAdminAssets = () => JSON.parse(localStorage.getItem('adminAssets') || '{"furniture":[],"textures":[]}')
+
+const normalizeOpeningWidth = (width, fallback = 22) => {
+  const value = Number(width)
+  if (!Number.isFinite(value) || value <= 0) return fallback
+  return value > 45 ? value / 3.5 : value
+}
 
 // ── Hit-test helpers ─────────────────────────────────────────────────────────
 function getItemHandles(item) {
@@ -49,10 +69,31 @@ function hitItem(mx, my, item) {
   return lx >= -w / 2 && lx <= w / 2 && ly >= -h / 2 && ly <= h / 2
 }
 
+function getNearestWallPoint(mx, my, walls, maxDist = 30) {
+  let best = null
+  walls.forEach((wall) => {
+    const dx = wall.end.x - wall.start.x
+    const dy = wall.end.y - wall.start.y
+    const len2 = dx * dx + dy * dy
+    if (!len2) return
+
+    const t = Math.max(0.05, Math.min(0.95, ((mx - wall.start.x) * dx + (my - wall.start.y) * dy) / len2))
+    const px = wall.start.x + t * dx
+    const py = wall.start.y + t * dy
+    const dist = Math.sqrt((mx - px) ** 2 + (my - py) ** 2)
+
+    if (dist <= maxDist && (!best || dist < best.dist)) {
+      best = { wall, t, px, py, dist }
+    }
+  })
+  return best
+}
+
 export default function Canvas2D({ onDesignChange }) {
+  const rootRef = useRef(null)
   const canvasRef  = useRef(null)
   const fileRef    = useRef(null)
-  const { activeTool, showGrid, zoom } = useSelector((s) => s.editor)
+  const { activeTool, showGrid, zoom, openingDesigns } = useSelector((s) => s.editor)
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const isPanning  = useRef(false)
   const panStart   = useRef({ x: 0, y: 0 })
@@ -207,32 +248,44 @@ export default function Canvas2D({ onDesignChange }) {
     window.__editorRedo = redo
   }, [undo, redo])
 
+  const deleteSelectedWall = useCallback(() => {
+    if (selectedWall === null) return false
+    const newWalls = wallsRef.current.filter(w => w.id !== selectedWall)
+    pushHistory(newWalls, placedRef.current, openingsRef.current)
+    setSelectedWall(null)
+    setSelectedItem(null)
+    setSelectedOpening(null)
+    return true
+  }, [selectedWall, pushHistory])
+
+  const deleteSelectedOpening = useCallback(() => {
+    if (selectedOpening === null) return false
+    const newOpenings = openingsRef.current.filter(o => o.id !== selectedOpening)
+    pushHistory(wallsRef.current, placedRef.current, newOpenings)
+    setSelectedOpening(null)
+    setSelectedItem(null)
+    setSelectedWall(null)
+    return true
+  }, [selectedOpening, pushHistory])
+
   useEffect(() => {
     const onKey = (e) => {
       if (e.ctrlKey && e.key === 'z') { e.preventDefault(); undo() }
       if (e.ctrlKey && e.key === 'y') { e.preventDefault(); redo() }
-      if (e.key === 'Escape') { setDrawStart(null); setSelectedWall(null); setSelectedItem(null) }
+      if (e.key === 'Escape') { setDrawStart(null); setSelectedWall(null); setSelectedItem(null); setSelectedOpening(null) }
       if (e.key === 'Delete') {
-        if (selectedWall !== null) {
-          const newWalls = wallsRef.current.filter(w => w.id !== selectedWall)
-          pushHistory(newWalls, placedRef.current, openingsRef.current)
-          setSelectedWall(null)
-        }
+        if (deleteSelectedWall()) return
+        if (deleteSelectedOpening()) return
         if (selectedItem !== null) {
           const newPlaced = placedRef.current.filter(p => p.id !== selectedItem)
           pushHistory(wallsRef.current, newPlaced, openingsRef.current)
           setSelectedItem(null)
         }
-        if (selectedOpening !== null) {
-          const newOpenings = openingsRef.current.filter(o => o.id !== selectedOpening)
-          pushHistory(wallsRef.current, placedRef.current, newOpenings)
-          setSelectedOpening(null)
-        }
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [undo, redo, selectedWall, selectedItem, walls, pushHistory])
+  }, [undo, redo, selectedItem, pushHistory, deleteSelectedWall, deleteSelectedOpening])
 
   // ── Draw ─────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -418,7 +471,8 @@ export default function Canvas2D({ onDesignChange }) {
       const len = Math.sqrt(dx*dx + dy*dy)
       const ux = dx/len, uy = dy/len   // unit along wall
       const nx = -uy, ny = ux           // unit normal to wall
-      const W2 = op.width / 2
+      const openingWidth = normalizeOpeningWidth(op.width, op.type === 'door' ? 26 : 24)
+      const W2 = openingWidth / 2
       const cx = wall.start.x + dx*op.t
       const cy = wall.start.y + dy*op.t
       const isSel = selectedOpening === op.id
@@ -435,28 +489,70 @@ export default function Canvas2D({ onDesignChange }) {
       ctx.restore()
 
       if (op.type === 'door') {
-        // Door: gap line + arc sweep showing swing
-        ctx.strokeStyle = isSel ? '#6c63ff' : '#2d6a4f'
-        ctx.lineWidth = 2.5; ctx.lineCap = 'round'
-        // Door slab
-        ctx.beginPath()
-        ctx.moveTo(cx - ux*W2, cy - uy*W2)
-        ctx.lineTo(cx + ux*W2, cy + uy*W2)
-        ctx.stroke()
-        // Swing arc
-        ctx.strokeStyle = isSel ? 'rgba(108,99,255,0.5)' : 'rgba(45,106,79,0.4)'
-        ctx.lineWidth = 1; ctx.setLineDash([3,3])
-        ctx.beginPath()
-        const startAngle = Math.atan2(-ux, uy)
-        ctx.arc(cx - ux*W2, cy - uy*W2, op.width, startAngle, startAngle + Math.PI/2)
-        ctx.stroke()
-        ctx.setLineDash([])
-        // Label
+        const design = op.design || 'single'
+        const doorStroke = isSel ? '#6c63ff' : '#2d6a4f'
+
+        if (design === 'double') {
+          ctx.strokeStyle = doorStroke
+          ctx.lineWidth = 2.2
+          ctx.lineCap = 'round'
+
+          const hx = ux * W2 * 0.5
+          const hy = uy * W2 * 0.5
+          // Two leaves
+          ctx.beginPath()
+          ctx.moveTo(cx - ux * W2, cy - uy * W2)
+          ctx.lineTo(cx - hx, cy - hy)
+          ctx.moveTo(cx + hx, cy + hy)
+          ctx.lineTo(cx + ux * W2, cy + uy * W2)
+          ctx.stroke()
+
+          // Center split line
+          ctx.strokeStyle = isSel ? 'rgba(108,99,255,0.6)' : 'rgba(45,106,79,0.55)'
+          ctx.lineWidth = 1.4
+          ctx.beginPath()
+          ctx.moveTo(cx - nx * 7, cy - ny * 7)
+          ctx.lineTo(cx + nx * 7, cy + ny * 7)
+          ctx.stroke()
+        } else if (design === 'sliding') {
+          ctx.strokeStyle = doorStroke
+          ctx.lineWidth = 2
+          ;[-1, 1].forEach((side) => {
+            const offX = nx * 4 * side
+            const offY = ny * 4 * side
+            ctx.beginPath()
+            ctx.moveTo(cx - ux * W2 + offX, cy - uy * W2 + offY)
+            ctx.lineTo(cx + ux * W2 + offX, cy + uy * W2 + offY)
+            ctx.stroke()
+          })
+        } else {
+          // Single door: gap line + swing arc
+          ctx.strokeStyle = doorStroke
+          ctx.lineWidth = 2.5
+          ctx.lineCap = 'round'
+          ctx.beginPath()
+          ctx.moveTo(cx - ux * W2, cy - uy * W2)
+          ctx.lineTo(cx + ux * W2, cy + uy * W2)
+          ctx.stroke()
+
+          ctx.strokeStyle = isSel ? 'rgba(108,99,255,0.5)' : 'rgba(45,106,79,0.4)'
+          ctx.lineWidth = 1
+          ctx.setLineDash([3, 3])
+          ctx.beginPath()
+          const startAngle = Math.atan2(-ux, uy)
+          ctx.arc(cx - ux * W2, cy - uy * W2, openingWidth, startAngle, startAngle + Math.PI / 2)
+          ctx.stroke()
+          ctx.setLineDash([])
+        }
+
         ctx.fillStyle = isSel ? '#6c63ff' : '#2d6a4f'
         ctx.font = `bold ${9/zoom}px DM Sans,sans-serif`; ctx.textAlign = 'center'
-        ctx.fillText('Door', cx + ny*18, cy + ny*18)
+        ctx.fillText(design === 'double' ? 'D-Double' : design === 'sliding' ? 'D-Slide' : 'Door', cx + ny*18, cy + ny*18)
       } else {
-        // Window: double line with glass fill
+        const design = op.design || 'casement'
+        const windowStroke = isSel ? '#6c63ff' : '#1a7abf'
+
+        // Window: base glass fill
         ctx.save()
         const wh = 8 // window visual half-width perpendicular
         ctx.fillStyle = 'rgba(173,216,230,0.55)'
@@ -466,24 +562,43 @@ export default function Canvas2D({ onDesignChange }) {
         ctx.lineTo(cx + ux*W2 - nx*wh, cy + uy*W2 - ny*wh)
         ctx.lineTo(cx - ux*W2 - nx*wh, cy - uy*W2 - ny*wh)
         ctx.closePath(); ctx.fill()
-        ctx.strokeStyle = isSel ? '#6c63ff' : '#1a7abf'
-        ctx.lineWidth = 2; ctx.lineCap = 'square'
-        // Two parallel lines
+        ctx.strokeStyle = windowStroke
+        ctx.lineWidth = 2
+        ctx.lineCap = 'square'
+
+        // Two frame lines
         ;[-1, 1].forEach(side => {
           ctx.beginPath()
           ctx.moveTo(cx - ux*W2 + nx*wh*side, cy - uy*W2 + ny*wh*side)
           ctx.lineTo(cx + ux*W2 + nx*wh*side, cy + uy*W2 + ny*wh*side)
           ctx.stroke()
         })
-        // Center divider
-        ctx.beginPath()
-        ctx.moveTo(cx + nx*wh, cy + ny*wh)
-        ctx.lineTo(cx - nx*wh, cy - ny*wh)
-        ctx.stroke()
+
+        if (design === 'sliding') {
+          // Overlap marker
+          ctx.beginPath()
+          ctx.moveTo(cx - ux*W2*0.15 + nx*wh*0.1, cy - uy*W2*0.15 + ny*wh*0.1)
+          ctx.lineTo(cx + ux*W2*0.35 + nx*wh*0.1, cy + uy*W2*0.35 + ny*wh*0.1)
+          ctx.stroke()
+        } else if (design === 'bay') {
+          // Bay side facets (stylized)
+          ctx.beginPath()
+          ctx.moveTo(cx - ux*W2, cy - uy*W2)
+          ctx.lineTo(cx - ux*W2 + nx*7, cy - uy*W2 + ny*7)
+          ctx.moveTo(cx + ux*W2, cy + uy*W2)
+          ctx.lineTo(cx + ux*W2 + nx*7, cy + uy*W2 + ny*7)
+          ctx.stroke()
+        } else {
+          // Casement center divider
+          ctx.beginPath()
+          ctx.moveTo(cx + nx*wh, cy + ny*wh)
+          ctx.lineTo(cx - nx*wh, cy - ny*wh)
+          ctx.stroke()
+        }
         ctx.restore()
-        ctx.fillStyle = isSel ? '#6c63ff' : '#1a7abf'
+        ctx.fillStyle = windowStroke
         ctx.font = `bold ${9/zoom}px DM Sans,sans-serif`; ctx.textAlign = 'center'
-        ctx.fillText('Win', cx + ny*20, cy + ny*20)
+        ctx.fillText(design === 'sliding' ? 'W-Slide' : design === 'bay' ? 'W-Bay' : 'Win', cx + ny*20, cy + ny*20)
       }
 
       // Selection dot
@@ -603,7 +718,18 @@ export default function Canvas2D({ onDesignChange }) {
         const cx = wall.start.x + dx*op.t, cy = wall.start.y + dy*op.t
         return Math.sqrt((mx-cx)**2 + (my-cy)**2) < 20
       })
-      if (hitOpening) { setSelectedOpening(hitOpening.id); setSelectedItem(null); setSelectedWall(null); return }
+      if (hitOpening) {
+        setSelectedOpening(hitOpening.id)
+        setSelectedItem(null)
+        setSelectedWall(null)
+        dragState.current = {
+          type: 'move-opening',
+          startMx: mx,
+          startMy: my,
+          origOpening: { ...hitOpening },
+        }
+        return
+      }
 
       // Hit test walls
       const hitWall = walls.find(w => {
@@ -637,23 +763,17 @@ export default function Canvas2D({ onDesignChange }) {
     }
 
     if (activeTool === 'door' || activeTool === 'window') {
-      // Find closest wall and compute t (0..1 along wall)
-      let bestWall = null, bestT = 0, bestDist = Infinity
-      walls.forEach(wall => {
-        const dx = wall.end.x - wall.start.x, dy = wall.end.y - wall.start.y
-        const len2 = dx*dx + dy*dy; if (!len2) return
-        const t = Math.max(0.05, Math.min(0.95, ((mx-wall.start.x)*dx + (my-wall.start.y)*dy) / len2))
-        const px = wall.start.x + t*dx, py = wall.start.y + t*dy
-        const dist = Math.sqrt((mx-px)**2 + (my-py)**2)
-        if (dist < bestDist && dist < 30) { bestDist = dist; bestWall = wall; bestT = t }
-      })
-      if (bestWall) {
+      const nearest = getNearestWallPoint(mx, my, walls, 30)
+      if (nearest?.wall) {
+        const selectedDesign = openingDesigns?.[activeTool]
+        const preset = OPENING_PRESETS[activeTool]?.[selectedDesign]
         const newOpening = {
           id: `op_${Date.now()}`,
-          wallId: bestWall.id,
-          t: bestT,
+          wallId: nearest.wall.id,
+          t: nearest.t,
           type: activeTool,
-          width: activeTool === 'door' ? 80 : 60,
+          design: preset ? selectedDesign : (activeTool === 'door' ? 'single' : 'casement'),
+          width: preset?.width || (activeTool === 'door' ? 26 : 60),
         }
         const newOpenings = [...openingsRef.current, newOpening]
         pushHistory(wallsRef.current, placedRef.current, newOpenings)
@@ -661,7 +781,7 @@ export default function Canvas2D({ onDesignChange }) {
         setSelectedItem(null); setSelectedWall(null)
       }
     }
-  }, [activeTool, walls, drawStart, pushHistory, screenToWorld])
+  }, [activeTool, walls, drawStart, pushHistory, screenToWorld, openingDesigns])
 
   // ── Mouse move — perform drag operations ─────────────────────────────
   const handleMouseMove = useCallback((e) => {
@@ -694,6 +814,20 @@ export default function Canvas2D({ onDesignChange }) {
         : p
       ))
 
+    } else if (ds.type === 'move-opening') {
+      const nearest = getNearestWallPoint(mx, my, wallsRef.current, 50)
+      if (!nearest?.wall) return
+      setOpenings(prev => {
+        const next = prev.map(o =>
+          o.id === ds.origOpening.id
+            ? { ...o, wallId: nearest.wall.id, t: nearest.t }
+            : o
+        )
+        openingsRef.current = next
+        window.__editorOpenings = next
+        return next
+      })
+
     } else if (ds.type === 'rotate') {
       const cx = origItem.x + origItem.w / 2
       const cy = origItem.y + origItem.h / 2
@@ -723,7 +857,7 @@ export default function Canvas2D({ onDesignChange }) {
 
     // Update cursor
     const canvas = canvasRef.current
-    if (ds.type === 'move') canvas.style.cursor = 'grabbing'
+    if (ds.type === 'move' || ds.type === 'move-opening') canvas.style.cursor = 'grabbing'
     else if (ds.type === 'rotate') canvas.style.cursor = 'crosshair'
     else canvas.style.cursor = 'nwse-resize'
   }, [screenToWorld])
@@ -758,6 +892,16 @@ export default function Canvas2D({ onDesignChange }) {
           openings: openingsRef.current.map(o => ({...o})),
         })
       }
+
+      const origOpening = dragState.current.origOpening
+      if (origOpening) {
+        redoStack.current = []
+        undoStack.current.push({
+          walls:    wallsRef.current.map(w => ({ ...w })),
+          placed:   placedRef.current.map(p => ({ ...p })),
+          openings: openingsRef.current.map(o => o.id === origOpening.id ? { ...origOpening } : { ...o }),
+        })
+      }
     }
     dragState.current = null
     if (canvasRef.current) canvasRef.current.style.cursor = ''
@@ -765,6 +909,49 @@ export default function Canvas2D({ onDesignChange }) {
 
   const handleDblClick   = () => setDrawStart(null)
   const handleRightClick = (e) => { e.preventDefault(); setDrawStart(null) }
+
+  useEffect(() => {
+    const selectedOpeningData = openings.find((opening) => opening.id === selectedOpening)
+    const nextSelection = selectedWall
+      ? { kind: 'wall', id: selectedWall, label: 'Wall' }
+      : selectedOpeningData
+        ? {
+            kind: selectedOpeningData.type === 'door' ? 'door' : 'window',
+            id: selectedOpeningData.id,
+            label: selectedOpeningData.type === 'door' ? 'Door' : 'Window',
+          }
+        : null
+
+    window.__editorSelection = nextSelection
+    window.dispatchEvent(new CustomEvent('editor-selection-change', { detail: nextSelection }))
+  }, [selectedWall, selectedOpening, openings])
+
+  useEffect(() => {
+    window.__editorDeleteSelection = () => {
+      if (deleteSelectedWall()) return true
+      if (deleteSelectedOpening()) return true
+      return false
+    }
+
+    return () => {
+      delete window.__editorDeleteSelection
+      delete window.__editorSelection
+      window.dispatchEvent(new CustomEvent('editor-selection-change', { detail: null }))
+    }
+  }, [deleteSelectedWall, deleteSelectedOpening])
+
+  useEffect(() => {
+    const onOutsidePointerDown = (event) => {
+      if (!rootRef.current) return
+      if (rootRef.current.contains(event.target)) return
+      setSelectedItem(null)
+      setSelectedWall(null)
+      setSelectedOpening(null)
+    }
+
+    window.addEventListener('pointerdown', onOutsidePointerDown)
+    return () => window.removeEventListener('pointerdown', onOutsidePointerDown)
+  }, [])
 
   const rotateSelected = (delta) => {
     if (!selectedItem) return
@@ -804,11 +991,24 @@ export default function Canvas2D({ onDesignChange }) {
   // ── Cursor style based on hover ──────────────────────────────────────
   const handleMouseMoveForCursor = useCallback((e) => {
     if (dragState.current) return
+    const canvas = canvasRef.current; if (!canvas) return
+
+    if (activeTool === 'wall' || activeTool === 'floor') {
+      canvas.style.cursor = 'crosshair'
+      return
+    }
+
+    if (activeTool === 'door' || activeTool === 'window') {
+      const world = screenToWorld(e.clientX, e.clientY)
+      const nearest = getNearestWallPoint(world.x, world.y, wallsRef.current, 30)
+      canvas.style.cursor = nearest ? 'copy' : 'no-drop'
+      return
+    }
+
     if (activeTool !== 'select') return
     const world = screenToWorld(e.clientX, e.clientY)
     const sel = selectedRef.current
     const items = placedRef.current
-    const canvas = canvasRef.current; if (!canvas) return
 
     if (sel !== null) {
       const item = items.find(p => p.id === sel)
@@ -820,7 +1020,21 @@ export default function Canvas2D({ onDesignChange }) {
       }
     }
     const hit = items.find(p => hitItem(world.x, world.y, p))
-    canvas.style.cursor = hit ? 'move' : ''
+    if (hit) {
+      canvas.style.cursor = 'move'
+      return
+    }
+
+    const hitOpening = openingsRef.current.find(op => {
+      const wall = wallsRef.current.find(w => w.id === op.wallId)
+      if (!wall) return false
+      const dx = wall.end.x - wall.start.x
+      const dy = wall.end.y - wall.start.y
+      const cx = wall.start.x + dx * op.t
+      const cy = wall.start.y + dy * op.t
+      return Math.sqrt((world.x - cx) ** 2 + (world.y - cy) ** 2) < 18
+    })
+    canvas.style.cursor = hitOpening ? 'move' : ''
   }, [activeTool, screenToWorld])
 
   // Merge mouse move handlers
@@ -875,9 +1089,10 @@ export default function Canvas2D({ onDesignChange }) {
   const floorTextures = assets.textures.filter(t => t.type === 'floor')
 
   const selItem = placed.find(p => p.id === selectedItem)
+  const selOpening = openings.find((opening) => opening.id === selectedOpening)
 
   return (
-    <div className="canvas2d-root">
+    <div className="canvas2d-root" ref={rootRef}>
 
       {/* ── Canvas area ────────────────────────────────────────────── */}
       <div className="canvas2d-main">
@@ -892,17 +1107,13 @@ export default function Canvas2D({ onDesignChange }) {
               <button className="canvas2d-toolbar__btn--danger" onClick={() => setBgImage(null)}>✕ BG</button>
             </>
           )}
-          <button className={`canvas2d-toolbar__btn${texPanel ? ' canvas2d-toolbar__btn--active' : ''}`}
+          <button className={`canvas2d-toolbar__btn canvas2d-toolbar__btn--textures${texPanel ? ' canvas2d-toolbar__btn--active' : ''}`}
             onClick={() => setTexPanel(!texPanel)}>
-            Textures
+            <span className="canvas2d-toolbar__btn-label">Textures</span>
+            <span className="canvas2d-toolbar__btn-caret" aria-hidden="true">
+              <ChevronDown className={`canvas2d-toolbar__btn-caret-icon${texPanel ? ' canvas2d-toolbar__btn-caret-icon--open' : ''}`} size={14} strokeWidth={2.5} />
+            </span>
           </button>
-          {(floorTex || wallTex) && (
-            <div className="canvas2d-toolbar__tex-tags">
-              {floorTex && <span className="canvas2d-toolbar__tex-tag--floor">Floor: {floorTex.name}</span>}
-              {wallTex  && <span className="canvas2d-toolbar__tex-tag--wall">Wall: {wallTex.name}</span>}
-              <button onClick={() => { setFloorTex(null); setWallTex(null) }} className="canvas2d-toolbar__clear-btn">✕</button>
-            </div>
-          )}
 
           {selItem && (
             <div className="canvas2d-toolbar__actions">
@@ -925,10 +1136,20 @@ export default function Canvas2D({ onDesignChange }) {
           )}
 
           {selectedWall && !selItem && (
-            <div className="canvas2d-toolbar__actions">
-              <span className="canvas2d-toolbar__hint canvas2d-toolbar__hint--teal">Wall selected</span>
-              <button onClick={() => { setWalls(w => w.filter(w2 => w2.id !== selectedWall)); setSelectedWall(null) }}
-                className="canvas2d-toolbar__action-btn canvas2d-toolbar__action-btn--red">🗑 Delete</button>
+            <div className="canvas2d-toolbar__actions canvas2d-toolbar__actions--selection">
+              <span className="canvas2d-toolbar__hint canvas2d-toolbar__hint--selection">Wall selected</span>
+              <button onClick={deleteSelectedWall}
+                className="canvas2d-toolbar__action-btn canvas2d-toolbar__action-btn--red canvas2d-toolbar__action-btn--selection-delete">🗑 Delete</button>
+            </div>
+          )}
+
+          {selectedOpening && !selItem && !selectedWall && (
+            <div className="canvas2d-toolbar__actions canvas2d-toolbar__actions--selection">
+              <span className="canvas2d-toolbar__hint canvas2d-toolbar__hint--selection">
+                {selOpening?.type === 'door' ? 'Door selected' : 'Window selected'}
+              </span>
+              <button onClick={deleteSelectedOpening}
+                className="canvas2d-toolbar__action-btn canvas2d-toolbar__action-btn--red canvas2d-toolbar__action-btn--selection-delete">🗑 Delete</button>
             </div>
           )}
 
@@ -938,10 +1159,10 @@ export default function Canvas2D({ onDesignChange }) {
             </div>
           )}
 
-          {!selItem && !selectedWall && activeTool !== 'floor' && (
+          {!selItem && !selectedWall && !selectedOpening && activeTool !== 'floor' && (
             <div className="canvas2d-toolbar__actions">
               <span className="canvas2d-toolbar__hint canvas2d-toolbar__hint--dim">
-                {activeTool === 'wall' ? '✏ Click to draw walls · Double-click to finish' : '↖ Click to select · Drag to move · Corner handles to resize · ↻ to rotate'}
+                {activeTool === 'wall' ? '✏ Click to draw walls · Double-click to finish' : '↖ Click an item to select · Drag to move · Use corner handles to resize · ↻ to rotate'}
               </span>
             </div>
           )}
@@ -952,9 +1173,10 @@ export default function Canvas2D({ onDesignChange }) {
         {/* Texture panel */}
         {texPanel && (
           <div className="canvas2d-tex-panel">
-            {/* Wall Color */}
-            <div>
-              <div className="canvas2d-tex-section__label"> WALL COLOR</div>
+            <div className="canvas2d-tex-panel__section">
+              <div className="canvas2d-tex-section__header">
+                <div className="canvas2d-tex-section__label">Wall Surface</div>
+              </div>
               <div className="canvas2d-tex-section__swatches">
                 {['#e8e2d8','#2d2a4a','#1a3a4a','#4a2a1a','#1a4a2a','#3a1a4a','#4a3a1a','#1a1a1a','#f5f0e8','#c8b89a'].map(col => (
                   <div key={col} onClick={() => { setWallColor(col); setWallTex(null) }}
@@ -970,9 +1192,10 @@ export default function Canvas2D({ onDesignChange }) {
               </div>
             </div>
 
-            {/* Floor Textures */}
-            <div>
-              <div className="canvas2d-tex-section__label"> FLOOR COLOR</div>
+            <div className="canvas2d-tex-panel__section">
+              <div className="canvas2d-tex-section__header">
+                <div className="canvas2d-tex-section__label">Floor Surface</div>
+              </div>
               <div className="canvas2d-tex-section__swatches">
                 {['#f5f2ee','#d7c8aa','#bfa58b','#9b8a72','#7f6c58','#5e5246','#2c2c32','#e8efe6','#c4d0b8','#bcd2e5'].map(col => (
                   <div key={col} onClick={() => { setFloorColor(col); setFloorTex(null) }}
@@ -987,28 +1210,12 @@ export default function Canvas2D({ onDesignChange }) {
                 </div>
               </div>
             </div>
-
-            {/* Floor Textures */}
-            <div>
-              <div className="canvas2d-tex-section__label"> FLOOR TEXTURES</div>
-              <div className="canvas2d-tex-section__swatches">
-                <button onClick={() => setFloorTex(null)}
-                  className={`canvas2d-tex-swatch--none ${!floorTex ? 'canvas2d-tex-swatch--none-floor-active' : 'canvas2d-tex-swatch--none-inactive'}`}>∅</button>
-                {floorTextures.map(t => (
-                  <div key={t.id} onClick={() => setFloorTex(t)}
-                    className={`canvas2d-tex-img ${floorTex?.id === t.id ? 'canvas2d-tex-img--floor-active' : 'canvas2d-tex-img--floor-inactive'}`}>
-                    <img src={t.image} alt={t.name} />
-                  </div>
-                ))}
-                {floorTextures.length === 0 && <span className="canvas2d-tex-empty">None — go to Admin</span>}
-              </div>
-            </div>
           </div>
         )}
 
         {/* Canvas */}
         <canvas ref={canvasRef}
-          className={`canvas2d-canvas canvas2d-canvas--${activeTool === 'wall' || activeTool === 'floor' ? 'wall' : 'default'}`}
+          className={`canvas2d-canvas canvas2d-canvas--${activeTool === 'wall' || activeTool === 'floor' ? 'wall' : (activeTool === 'door' || activeTool === 'window' ? 'opening' : 'default')}`}
           onMouseMove={onMouseMove}
           onMouseDown={handleMouseDown}
           onMouseUp={handleMouseUp}

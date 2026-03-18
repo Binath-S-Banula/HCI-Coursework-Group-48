@@ -10,6 +10,7 @@ import FurniturePanel from '../components/furniture/FurniturePanel'
 import PropertiesPanel from '../components/editor/PropertiesPanel'
 import { projectService } from '../services/project.service'
 import toast from 'react-hot-toast'
+import logoImage from '../uploads/homeland-logo.png'
 import '../styles/pages/EditorPage.css'
 
 // ── Editor Page ───────────────────────────────────────────────────────
@@ -152,8 +153,7 @@ export default function EditorPage() {
           <button
             style={{ display:'flex', alignItems:'center', gap:8, background:'none', border:'none', cursor:'pointer', color:'inherit', padding:0 }}
             onClick={() => { doSave(true); navigate('/dashboard') }}>
-            <div className="editor-topbar__logo">H</div>
-            <span className="editor-topbar__name">HomePlan3D</span>
+            <img src={logoImage} alt="HomePlan3D Logo" className="editor-topbar__logo-image" />
           </button>
           <span style={{ color:'rgba(255,255,255,0.1)' }}>|</span>
 

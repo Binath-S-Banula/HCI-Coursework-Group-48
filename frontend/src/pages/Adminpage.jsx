@@ -9,13 +9,14 @@ import {
   CheckCircle2,
   Circle,
   X,
-  Settings,
+  Pencil,
   LogOut,
   Trash2,
 } from 'lucide-react'
 import { logout } from '../store/slices/authSlice'
 import { furnitureService } from '../services/furniture.service'
 import { projectService } from '../services/project.service'
+import logoImage from '../uploads/homeland-logo-admin.png'
 import '../styles/pages/AdminPage.css'
 
 const CATS = ['sofa','chair','table','bed','storage','lighting','kitchen','bathroom','decor']
@@ -46,7 +47,9 @@ export default function AdminPage() {
   const [imageFile, setImageFile] = useState(null)
   const [model3dFile, setModel3dFile] = useState(null)
   const [model3dName, setModel3dName] = useState('')
+  const [editingId, setEditingId] = useState(null)
   const [msg,     setMsg]     = useState(null)
+  const isEditing = Boolean(editingId)
 
   const mapFurniture = (item) => ({
     ...item,
@@ -59,6 +62,15 @@ export default function AdminPage() {
     setTimeout(() => setMsg(null), 2500)
   }
   const readFile = (file, cb) => { const r = new FileReader(); r.onload = (e) => cb(e.target.result); r.readAsDataURL(file) }
+
+  const resetFurnitureForm = () => {
+    setPreview(null)
+    setImageFile(null)
+    setModel3dFile(null)
+    setModel3dName('')
+    setEditingId(null)
+    setForm({ name:'', category:'sofa', price:'', width:'', depth:'' })
+  }
 
   const loadFurniture = async () => {
     try {
@@ -84,11 +96,17 @@ export default function AdminPage() {
     loadProjects()
   }, [])
 
-  const addFurniture = async () => {
-    if (!imageFile)  return flash('Please upload a 2D furniture image', 'error')
-    if (!model3dFile) return flash('Please upload a 3D model (.glb or .gltf)', 'error')
-    if (model3dFile.size > MAX_MODEL_FILE_SIZE) return flash('3D model file must be 100MB or smaller', 'error')
+  const saveFurniture = async () => {
     if (!form.name)  return flash('Please enter a furniture name', 'error')
+
+    if (!isEditing) {
+      if (!imageFile)  return flash('Please upload a 2D furniture image', 'error')
+      if (!model3dFile) return flash('Please upload a 3D model (.glb or .gltf)', 'error')
+    }
+
+    if (model3dFile && model3dFile.size > MAX_MODEL_FILE_SIZE) {
+      return flash('3D model file must be 100MB or smaller', 'error')
+    }
 
     try {
       const payload = new FormData()
@@ -97,29 +115,57 @@ export default function AdminPage() {
       payload.append('price', String(+form.price || 0))
       payload.append('width', String(+form.width || 80))
       payload.append('depth', String(+form.depth || 80))
-      payload.append('image', imageFile)
-      payload.append('model3dFile', model3dFile)
-      payload.append('model3dName', model3dName)
 
-      const created = await furnitureService.create(payload)
-      const item = mapFurniture(created)
-      setStore((prev) => ({ ...prev, furniture: [item, ...prev.furniture] }))
-      setPreview(null)
-      setImageFile(null)
-      setModel3dFile(null)
-      setModel3dName('')
-      setForm({ name:'', category:'sofa', price:'', width:'', depth:'' })
-      flash('Furniture added successfully')
+      if (imageFile) payload.append('image', imageFile)
+      if (model3dFile) {
+        payload.append('model3dFile', model3dFile)
+        payload.append('model3dName', model3dName)
+      }
+
+      if (isEditing) {
+        const updated = await furnitureService.update(editingId, payload)
+        const item = mapFurniture(updated)
+        setStore((prev) => ({
+          ...prev,
+          furniture: prev.furniture.map((f) => (f.id === item.id ? item : f)),
+        }))
+        resetFurnitureForm()
+        flash('Furniture updated successfully')
+      } else {
+        const created = await furnitureService.create(payload)
+        const item = mapFurniture(created)
+        setStore((prev) => ({ ...prev, furniture: [item, ...prev.furniture] }))
+        resetFurnitureForm()
+        flash('Furniture added successfully')
+      }
     } catch (err) {
-      const message = err?.response?.data?.message || 'Failed to add furniture'
+      const message = err?.response?.data?.message || (isEditing ? 'Failed to update furniture' : 'Failed to add furniture')
       flash(message, 'error')
     }
+  }
+
+  const editFurniture = (item) => {
+    setEditingId(item.id)
+    setForm({
+      name: item.name || '',
+      category: item.category || 'sofa',
+      price: String(item.price ?? ''),
+      width: String(item.width ?? ''),
+      depth: String(item.depth ?? ''),
+    })
+    setPreview(item.image || null)
+    setImageFile(null)
+    setModel3dFile(null)
+    setModel3dName(item.model3dName || '')
+    flash(`Editing ${item.name}`)
   }
 
   const del = async (id) => {
     try {
       await furnitureService.delete(id)
       setStore((prev) => ({ ...prev, furniture: prev.furniture.filter((i) => i.id !== id) }))
+      if (editingId === id) resetFurnitureForm()
+      flash('Furniture removed')
     } catch {
       flash('Failed to remove furniture', 'error')
     }
@@ -173,7 +219,10 @@ export default function AdminPage() {
           {item.model3d && <span style={{ marginLeft:6, fontSize:'0.6rem', background:'rgba(67,217,173,0.2)', color:'#43d9ad', padding:'1px 5px', borderRadius:4, fontWeight:700 }}>3D</span>}
         </div>
       </div>
-      <button className="admin-item-card__delete" onClick={() => del(item.id)}><X size={10} /></button>
+      <div className="admin-item-card__actions">
+        <button className="admin-item-card__edit" onClick={() => editFurniture(item)}><Pencil size={10} /></button>
+        <button className="admin-item-card__delete" onClick={() => del(item.id)}><X size={10} /></button>
+      </div>
     </div>
   )
 
@@ -221,13 +270,13 @@ export default function AdminPage() {
       <Flash />
       <div className="admin-page-grid">
         <div className="admin-form-card">
-          <h3>+ Add Furniture</h3>
+          <h3>{isEditing ? 'Edit Furniture' : '+ Add Furniture'}</h3>
 
           {/* Step 1 — 2D Image */}
           <div style={{ marginBottom:14 }}>
             <div style={{ fontSize:'0.7rem', fontWeight:700, color: preview ? '#43d9ad' : '#9b95ff', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:6, display:'flex', alignItems:'center', gap:6 }}>
               <span style={{ width:16, height:16, borderRadius:'50%', background: preview ? '#43d9ad' : 'rgba(108,99,255,0.5)', display:'inline-flex', alignItems:'center', justifyContent:'center', fontSize:9, color:'#fff', flexShrink:0 }}>{preview ? <CheckCircle2 size={10} /> : '1'}</span>
-              2D Image (required)
+              2D Image ({isEditing ? 'optional' : 'required'})
             </div>
             <UploadBox
               preview={preview}
@@ -248,7 +297,7 @@ export default function AdminPage() {
           <div style={{ marginBottom:14 }}>
             <div style={{ fontSize:'0.7rem', fontWeight:700, color: model3dFile ? '#43d9ad' : '#9b95ff', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:6, display:'flex', alignItems:'center', gap:6 }}>
               <span style={{ width:16, height:16, borderRadius:'50%', background: model3dFile ? '#43d9ad' : 'rgba(108,99,255,0.5)', display:'inline-flex', alignItems:'center', justifyContent:'center', fontSize:9, color:'#fff', flexShrink:0 }}>{model3dFile ? <CheckCircle2 size={10} /> : '2'}</span>
-              3D Model — .glb or .gltf (required)
+              3D Model — .glb or .gltf ({isEditing ? 'optional' : 'required'})
             </div>
             <label style={{ display:'flex', alignItems:'center', gap:10, padding:'12px', borderRadius:10, border:`1px solid ${model3dFile ? 'rgba(67,217,173,0.5)' : 'rgba(255,255,255,0.1)'}`, background: model3dFile ? 'rgba(67,217,173,0.06)' : 'rgba(255,255,255,0.03)', cursor:'pointer', transition:'all .15s' }}>
               <Box size={22} />
@@ -298,10 +347,16 @@ export default function AdminPage() {
               {CATS.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase()+c.slice(1)}</option>)}
             </select>
           </div>
-          <button className="admin-submit-purple" onClick={addFurniture}
-            style={{ opacity: (preview && model3dFile && form.name) ? 1 : 0.5 }}>
-            Add Furniture
+          <button className="admin-submit-purple" onClick={saveFurniture}
+            style={{ opacity: ((isEditing ? form.name : (preview && model3dFile && form.name)) ? 1 : 0.5) }}>
+            {isEditing ? 'Save Changes' : 'Add Furniture'}
           </button>
+          {isEditing && (
+            <button className="admin-submit-purple" onClick={resetFurnitureForm}
+              style={{ marginTop: 8, background: 'rgba(255,255,255,0.08)' }}>
+              Cancel Edit
+            </button>
+          )}
         </div>
         <div>
           <div className="admin-item-count">{store.furniture.length} items in catalog</div>
@@ -361,11 +416,7 @@ export default function AdminPage() {
       {/* Sidebar */}
       <aside className="admin-sidebar">
         <div className="admin-sidebar__logo">
-          <div className="admin-sidebar__logo-icon"><Settings size={18} /></div>
-          <div className="admin-sidebar__logo-text">
-            <div className="admin-sidebar__logo-name">HomePlan3D</div>
-            <div className="admin-sidebar__logo-badge">Admin Panel</div>
-          </div>
+          <img src={logoImage} alt="HomePlan3D Logo" className="admin-sidebar__logo-image" />
         </div>
 
         <nav className="admin-sidebar__nav">

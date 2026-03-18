@@ -1,6 +1,7 @@
+import { useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { AppWindow, DoorOpen, Minus, MousePointer2, Redo2, Square, Undo2 } from 'lucide-react'
-import { setTool } from '../../store/slices/editorSlice'
+import { AppWindow, ChevronDown, DoorOpen, Minus, MousePointer2, Redo2, Square, Undo2 } from 'lucide-react'
+import { setOpeningDesign, setTool } from '../../store/slices/editorSlice'
 
 const tools = [
   { id: 'select',  icon: MousePointer2, label: 'Select',  key: 'V' },
@@ -10,56 +11,118 @@ const tools = [
   { id: 'window',  icon: AppWindow,     label: 'Window',  key: 'N' },
 ]
 
+const openingVariants = {
+  door: [
+    { id: 'single', label: 'Single Door' },
+    { id: 'double', label: 'Double Door' },
+    { id: 'sliding', label: 'Sliding Door' },
+  ],
+  window: [
+    { id: 'casement', label: 'Casement Window' },
+    { id: 'sliding', label: 'Sliding Window' },
+    { id: 'bay', label: 'Bay Window' },
+  ],
+}
+
 export default function EditorToolbar() {
   const dispatch    = useDispatch()
-  const { activeTool, mode } = useSelector((s) => s.editor)
+  const { activeTool, mode, openingDesigns } = useSelector((s) => s.editor)
+  const [expandedTool, setExpandedTool] = useState(null)
+
+  const selectTool = (toolId, isDisabled) => {
+    if (isDisabled) return
+    dispatch(setTool(toolId))
+    if (toolId === 'door' || toolId === 'window') {
+      setExpandedTool((prev) => (prev === toolId ? null : toolId))
+      return
+    }
+    setExpandedTool(null)
+  }
+
+  const selectVariant = (toolId, designId) => {
+    dispatch(setOpeningDesign({ type: toolId, design: designId }))
+    dispatch(setTool(toolId))
+  }
 
   return (
-    <div style={{ width: 52, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '12px 0', gap: 4, background: '#13131f', borderRight: '1px solid rgba(255,255,255,0.05)', flexShrink: 0 }}>
+    <aside className="editor-toolbar" aria-label="Editor tools">
+      <p className="editor-toolbar__section-label">Tools</p>
+
       {tools.map((t) => {
         const isActive   = activeTool === t.id
         const isDisabled = mode === '3d' && t.id !== 'select'
         const Icon = t.icon
-        const baseColor = isActive ? '#fff' : isDisabled ? '#3d4256' : '#8b92ad'
+        const isOpeningTool = t.id === 'door' || t.id === 'window'
+        const isExpanded = expandedTool === t.id && isOpeningTool && !isDisabled
+        const variants = openingVariants[t.id] || []
+        const selectedVariant = openingDesigns?.[t.id]
+
         return (
-          <div key={t.id} className="relative group">
+          <div key={t.id} className="editor-tool-group">
             <button
-              onClick={() => !isDisabled && dispatch(setTool(t.id))}
+              type="button"
+              onClick={() => selectTool(t.id, isDisabled)}
               title={`${t.label} (${t.key})`}
-              style={{
-                width: 38, height: 38, borderRadius: 10, fontSize: 14,
-                border:      isActive ? '1px solid rgba(108,99,255,0.4)' : '1px solid transparent',
-                background:  isActive ? 'linear-gradient(135deg,rgba(108,99,255,0.3),rgba(108,99,255,0.1))' : 'transparent',
-                color:       baseColor,
-                cursor:      isDisabled ? 'not-allowed' : 'pointer',
-                transition:  'all .15s',
-              }}
-              onMouseEnter={e => { if (!isActive && !isDisabled) e.currentTarget.style.color = '#d2d7ee' }}
-              onMouseLeave={e => { if (!isActive && !isDisabled) e.currentTarget.style.color = '#8b92ad' }}>
-              <Icon size={18} strokeWidth={2.1} />
+              disabled={isDisabled}
+              className={`editor-tool-btn ${isActive ? 'editor-tool-btn--active' : 'editor-tool-btn--inactive'} ${isDisabled ? 'editor-tool-btn--disabled' : ''}`}>
+              <span className="editor-tool-btn__icon" aria-hidden="true">
+                <Icon size={17} strokeWidth={2.1} />
+              </span>
+              <span className="editor-tool-btn__label-wrap">
+                <span className="editor-tool-btn__label">{t.label}</span>
+              </span>
+              {isOpeningTool && (
+                <span className="editor-tool-btn__caret" aria-hidden="true">
+                  <ChevronDown className={`editor-tool-btn__caret-icon ${isExpanded ? 'editor-tool-btn__caret-icon--open' : ''}`} size={15} strokeWidth={2.5} />
+                </span>
+              )}
             </button>
-            {/* Tooltip */}
-            <div style={{ position: 'absolute', left: 44, top: '50%', transform: 'translateY(-50%)', background: '#1a1a2e', color: '#fff', fontSize: 11, padding: '4px 10px', borderRadius: 7, whiteSpace: 'nowrap', border: '1px solid rgba(255,255,255,0.1)', pointerEvents: 'none', opacity: 0, transition: 'opacity .15s', zIndex: 100 }}
-              className="group-hover:opacity-100">
-              {t.label} <span style={{ color: '#555' }}>{t.key}</span>
-            </div>
+
+            {isExpanded && (
+              <div className="editor-tool-variants" role="listbox" aria-label={`${t.label} designs`}>
+                {variants.map((variant) => {
+                  const isVariantActive = selectedVariant === variant.id
+                  return (
+                    <button
+                      key={variant.id}
+                      type="button"
+                      className={`editor-tool-variant-btn ${isVariantActive ? 'editor-tool-variant-btn--active' : ''}`}
+                      onClick={() => selectVariant(t.id, variant.id)}>
+                      {variant.label}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
           </div>
         )
       })}
 
-      <div style={{ width: 24, height: 1, background: 'rgba(255,255,255,0.07)', margin: '6px 0' }} />
+      <div className="editor-tool-divider" />
 
-      {/* Undo */}
-      <button title="Undo (Ctrl+Z)" onClick={() => window.__editorUndo?.()}
-        style={{ width: 38, height: 38, borderRadius: 10, background: 'transparent', border: 'none', cursor: 'pointer', color: '#8b92ad', fontSize: 16 }}
-        onMouseEnter={e => e.currentTarget.style.color = '#d2d7ee'}
-        onMouseLeave={e => e.currentTarget.style.color = '#8b92ad'}><Undo2 size={18} strokeWidth={2.1} /></button>
+      <p className="editor-toolbar__section-label">History</p>
 
-      {/* Redo */}
-      <button title="Redo (Ctrl+Y)" onClick={() => window.__editorRedo?.()}
-        style={{ width: 38, height: 38, borderRadius: 10, background: 'transparent', border: 'none', cursor: 'pointer', color: '#8b92ad', fontSize: 16 }}
-        onMouseEnter={e => e.currentTarget.style.color = '#d2d7ee'}
-        onMouseLeave={e => e.currentTarget.style.color = '#8b92ad'}><Redo2 size={18} strokeWidth={2.1} /></button>
-    </div>
+      <button
+        type="button"
+        title="Undo (Ctrl+Z)"
+        onClick={() => window.__editorUndo?.()}
+        className="editor-tool-btn editor-tool-btn--secondary">
+        <span className="editor-tool-btn__icon" aria-hidden="true"><Undo2 size={17} strokeWidth={2.1} /></span>
+        <span className="editor-tool-btn__label-wrap">
+          <span className="editor-tool-btn__label">Undo</span>
+        </span>
+      </button>
+
+      <button
+        type="button"
+        title="Redo (Ctrl+Y)"
+        onClick={() => window.__editorRedo?.()}
+        className="editor-tool-btn editor-tool-btn--secondary">
+        <span className="editor-tool-btn__icon" aria-hidden="true"><Redo2 size={17} strokeWidth={2.1} /></span>
+        <span className="editor-tool-btn__label-wrap">
+          <span className="editor-tool-btn__label">Redo</span>
+        </span>
+      </button>
+    </aside>
   )
 }

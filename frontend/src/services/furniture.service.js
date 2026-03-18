@@ -11,7 +11,9 @@ export const furnitureService = {
     return data.data
   },
   update:     async (id, payload) => {
-    const { data } = await api.put(`/furniture/${id}`, payload)
+    const { data } = await api.put(`/furniture/${id}`, payload, {
+      headers: payload instanceof FormData ? { 'Content-Type': 'multipart/form-data' } : undefined,
+    })
     return data.data
   },
   delete:     async (id) => {
