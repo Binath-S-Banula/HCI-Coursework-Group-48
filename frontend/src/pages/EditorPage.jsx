@@ -107,21 +107,33 @@ export default function EditorPage() {
   })
 
   // ── Capture thumbnail from 3D canvas only ─────────────────────────
-  const captureThumb = () => {
+  const captureThumb = async () => {
     try {
+      // Enable screenshot mode via event to trigger React state update in Canvas3D
+      window.dispatchEvent(new CustomEvent('screenshot-mode', { detail: { enabled: true } }))
+      
+      // Wait for multiple frames to ensure re-render and canvas update
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
       const canvas = document.querySelector('.canvas3d-root canvas')
-      if (canvas) return canvas.toDataURL('image/jpeg', 0.5)
+      let result = null
+      if (canvas) result = canvas.toDataURL('image/jpeg', 0.5)
+      
+      // Disable screenshot mode
+      window.dispatchEvent(new CustomEvent('screenshot-mode', { detail: { enabled: false } }))
+      
+      return result
     } catch {}
     return null
   }
 
   // ── Save ──────────────────────────────────────────────────────────
-  const doSave = useCallback((silent = false) => {
+  const doSave = useCallback(async (silent = false) => {
     if (!projectId) return
     if (!silent) setIsSaving(true)
 
     const state = collectState()
-    const capturedThumbnail = captureThumb()
+    const capturedThumbnail = await captureThumb()
     const patch = {
       name: projectName,
       ...state,

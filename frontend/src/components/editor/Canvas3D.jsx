@@ -1107,6 +1107,7 @@ export default function Canvas3D() {
   const [selectedObject, setSelectedObject] = useState(null)
   const [transformMode, setTransformMode] = useState('translate')
   const [isTransforming, setIsTransforming] = useState(false)
+  const [isScreenshotMode, setIsScreenshotMode] = useState(false)
   const orbitRef = useRef(null)
   const furnitureRefs = useRef({})
   const sceneCenterRef = useRef({ cx: 0, cz: 0 })
@@ -1183,6 +1184,14 @@ export default function Canvas3D() {
     }
     window.addEventListener('editor-3d-reset', handleReset)
     return () => window.removeEventListener('editor-3d-reset', handleReset)
+  }, [])
+
+  useEffect(() => {
+    const handleScreenshotMode = (e) => {
+      setIsScreenshotMode(e.detail?.enabled || false)
+    }
+    window.addEventListener('screenshot-mode', handleScreenshotMode)
+    return () => window.removeEventListener('screenshot-mode', handleScreenshotMode)
   }, [])
 
   useEffect(() => {
@@ -1466,7 +1475,7 @@ export default function Canvas3D() {
             maxY={panLimitMaxY}
           />
 
-          {selectedObject && (
+          {selectedObject && !isScreenshotMode && (
             <TransformControls
               object={selectedObject}
               mode={transformMode}
