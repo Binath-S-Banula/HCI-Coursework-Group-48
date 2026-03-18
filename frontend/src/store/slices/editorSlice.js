@@ -8,7 +8,7 @@ const initialState = {
   selectedObjectId: null,
   lightIntensity:   1,
   timeOfDay:        'day',
-  zoom:             1,
+  zoom:             1.5,
   panOffset:        { x: 0, y: 0 },
   showGrid:         true,
   showDimensions:   true,
@@ -41,7 +41,7 @@ const editorSlice = createSlice({
     setPanOffset(state, action)    { state.panOffset = action.payload },
     toggleGrid(state)              { state.showGrid = !state.showGrid },
     toggleDimensions(state)        { state.showDimensions = !state.showDimensions },
-    resetView(state)               { state.zoom = 1; state.panOffset = { x: 0, y: 0 } },
+    resetView(state)               { state.zoom = 1.5; state.panOffset = { x: 0, y: 0 } },
   },
 })
 

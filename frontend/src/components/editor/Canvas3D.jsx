@@ -16,13 +16,13 @@ function CameraController({ hasWalls, cx, cz }) {
     if (hasWalls && !moved.current) {
       const tx = cx * SCALE
       const tz = cz * SCALE
-      camera.position.set(tx + 7, 6, tz + 9)
+      camera.position.set(tx + 3.2, 3, tz + 4.1)
       camera.lookAt(tx, 1, tz)
       moved.current = true
     }
     if (!hasWalls) {
       moved.current = false
-      camera.position.set(6, 5, 8)
+      camera.position.set(2.8, 2.4, 3.8)
       camera.lookAt(0, 1, 0)
     }
   }, [hasWalls, cx, cz, camera])
@@ -1019,7 +1019,7 @@ export default function Canvas3D() {
     <div className="canvas3d-root">
       <Canvas
         shadows
-        camera={{ position: [6, 5, 8], fov: 50 }}
+        camera={{ position: [2.8, 2.4, 3.8], fov: 50 }}
         style={{ background: preset.skyColor }}
         gl={{ preserveDrawingBuffer: true }}
       >
