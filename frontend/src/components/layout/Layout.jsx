@@ -89,10 +89,46 @@ export default function Layout() {
       {!isEditor && (
         <footer className="footer">
           <div className="footer__inner">
-            <Link to="/" className="footer__brand">
-              <img src={logoImage} alt="HomePlan3D Logo" className="footer__brand-image" />
-            </Link>
-            <span className="footer__copy">©️ {new Date().getFullYear()} HomePlan3D. All rights reserved.</span>
+            <div className="footer__grid">
+              <div className="footer__col footer__col--brand">
+                <Link to="/" className="footer__brand">
+                  <img src={logoImage} alt="HomePlan3D Logo" className="footer__brand-image" />
+                </Link>
+                <p className="footer__desc">
+                  Design floor plans, visualize spaces in 3D, and share your projects with the community.
+                </p>
+              </div>
+
+              <div className="footer__col">
+                <h4 className="footer__heading">Explore</h4>
+                <div className="footer__links">
+                  <Link to="/" className="footer__link">Home</Link>
+                  <Link to="/gallery" className="footer__link">Gallery</Link>
+                  <Link to="/catalog" className="footer__link">Furniture</Link>
+                </div>
+              </div>
+
+              <div className="footer__col">
+                <h4 className="footer__heading">Account</h4>
+                <div className="footer__links">
+                  {isAuthenticated ? (
+                    <>
+                      <Link to="/dashboard" className="footer__link">Dashboard</Link>
+                      <button className="footer__link footer__link-btn" onClick={handleNewDesign}>New Design</button>
+                    </>
+                  ) : (
+                    <>
+                      <Link to="/login" className="footer__link">Sign In</Link>
+                      <Link to="/register" className="footer__link">Get Started</Link>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="footer__bottom">
+              <span className="footer__copy">© {new Date().getFullYear()} HomePlan3D. All rights reserved.</span>
+            </div>
           </div>
         </footer>
       )}
