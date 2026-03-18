@@ -230,6 +230,61 @@
   color: #ffe4e6;
 }
 
+.canvas2d-toolbar__actions--door {
+  border-radius: 12px;
+  gap: 12px;
+  padding: 6px 10px;
+}
+
+.canvas2d-toolbar__door-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.canvas2d-toolbar__door-label {
+  font-size: 10px;
+  color: #d7dcf3;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.canvas2d-toolbar__door-toggle {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(255,255,255,0.16);
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(0,0,0,0.2);
+}
+
+.canvas2d-toolbar__door-btn {
+  border: none;
+  border-right: 1px solid rgba(255,255,255,0.1);
+  background: transparent;
+  color: #b9bfd8;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 8px;
+  cursor: pointer;
+  transition: all .15s;
+}
+
+.canvas2d-toolbar__door-btn:last-child {
+  border-right: none;
+}
+
+.canvas2d-toolbar__door-btn:hover {
+  color: #eef0ff;
+  background: rgba(108,99,255,0.14);
+}
+
+.canvas2d-toolbar__door-btn--active {
+  color: #eef0ff;
+  background: rgba(108,99,255,0.3);
+}
+
 /* ── Texture / Color Panel ────────────────────────────────────────── */
 .canvas2d-tex-panel {
   padding: 12px 14px;
