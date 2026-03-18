@@ -456,6 +456,26 @@ export default function Canvas2D({ onDesignChange }) {
         ctx.fillText(item.name, 0, 0)
       }
 
+      const itemColor = item.color || '#8b6b4a'
+      const badgeR = 5 / zoom
+      const badgePad = 3 / zoom
+      const badgeX = w / 2 - badgeR - badgePad
+      const badgeY = -h / 2 + badgeR + badgePad
+
+      ctx.beginPath()
+      ctx.arc(badgeX, badgeY, badgeR + (1.5 / zoom), 0, Math.PI * 2)
+      ctx.fillStyle = 'rgba(255,255,255,0.95)'
+      ctx.fill()
+
+      ctx.beginPath()
+      ctx.arc(badgeX, badgeY, badgeR, 0, Math.PI * 2)
+      ctx.fillStyle = itemColor
+      ctx.fill()
+
+      ctx.strokeStyle = 'rgba(0,0,0,0.35)'
+      ctx.lineWidth = 0.9 / zoom
+      ctx.stroke()
+
       // Label
       ctx.fillStyle = 'rgba(0,0,0,0.55)'
       ctx.font = `bold ${9 / zoom}px DM Sans,sans-serif`
@@ -1149,9 +1169,21 @@ export default function Canvas2D({ onDesignChange }) {
 
   const updateSelectedColor = (color) => {
     if (!selectedItem || !color) return
-    setPlaced(prev => prev.map(p =>
-      p.id === selectedItem ? { ...p, color } : p
-    ))
+    setPlaced(prev => {
+      let changed = false
+      const next = prev.map(p => {
+        if (p.id !== selectedItem) return p
+        if (p.color === color) return p
+        changed = true
+        return { ...p, color }
+      })
+      if (changed) {
+        placedRef.current = next
+        window.__editorPlaced = next
+        window.dispatchEvent(new Event('editor-state-change'))
+      }
+      return changed ? next : prev
+    })
   }
 
   const deleteSelected = () => {

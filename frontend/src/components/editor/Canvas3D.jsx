@@ -827,34 +827,41 @@ function resolveModelUrl(model3d) {
 
 function CustomModel({ url, w, d, color }) {
   const { scene } = useGLTF(url)
-  const tintedScene = useMemo(() => scene.clone(true), [scene])
-
-  useEffect(() => {
-    if (!color) return
-    tintedScene.traverse((child) => {
+  const tintedScene = useMemo(() => {
+    const clonedScene = scene.clone(true)
+    clonedScene.traverse((child) => {
       if (!child.isMesh || !child.material) return
       const applyTint = (material) => {
-        if (!material || !material.color) return
-        const cloned = material.clone()
-        cloned.color = new THREE.Color(color)
-        child.material = cloned
+        if (!material || !material.color) return material
+        const clonedMaterial = material.clone()
+        if (color) {
+          clonedMaterial.color = new THREE.Color(color)
+          clonedMaterial.map = null
+          clonedMaterial.emissiveMap = null
+        }
+        return clonedMaterial
       }
       if (Array.isArray(child.material)) {
-        child.material.forEach(applyTint)
+        child.material = child.material.map(applyTint)
       } else {
-        applyTint(child.material)
+        child.material = applyTint(child.material)
       }
     })
-  }, [tintedScene, color])
+    return clonedScene
+  }, [scene, color])
 
   // Auto-scale model to fit the furniture footprint (w × d)
-  const box = new THREE.Box3().setFromObject(tintedScene)
-  const size = new THREE.Vector3()
-  box.getSize(size)
-  const scaleX = w / (size.x || 1)
-  const scaleZ = d / (size.z || 1)
-  const scale  = Math.min(scaleX, scaleZ)   // uniform scale to fit
-  const offsetY = -box.min.y * scale         // sit on floor
+  const { scale, offsetY } = useMemo(() => {
+    const box = new THREE.Box3().setFromObject(tintedScene)
+    const size = new THREE.Vector3()
+    box.getSize(size)
+    const scaleX = w / (size.x || 1)
+    const scaleZ = d / (size.z || 1)
+    const nextScale = Math.min(scaleX, scaleZ)
+    const nextOffsetY = -box.min.y * nextScale
+    return { scale: nextScale, offsetY: nextOffsetY }
+  }, [tintedScene, w, d])
+
   return (
     <Clone
       object={tintedScene}
@@ -1030,6 +1037,13 @@ export default function Canvas3D() {
     window.addEventListener('editor-3d-reset', handleReset)
     return () => window.removeEventListener('editor-3d-reset', handleReset)
   }, [])
+
+  useEffect(() => {
+    liveData.placed.forEach((item) => {
+      const modelUrl = resolveModelUrl(item.model3d)
+      if (modelUrl) useGLTF.preload(modelUrl)
+    })
+  }, [liveData.placed])
 
   const hasDesign = liveData.walls.length > 0 || liveData.placed.length > 0 || (liveData.floor && liveData.floor.w > 0 && liveData.floor.h > 0)
   const preset = SHADING_PRESETS[normalizeTimeOfDay(timeOfDay)]

@@ -42,6 +42,12 @@ export default function EditorPage() {
     }
   }, [dispatch, searchParams])
 
+  useEffect(() => {
+    if (mode === '3d') {
+      window.dispatchEvent(new Event('editor-state-change'))
+    }
+  }, [mode])
+
   // ── Load project on mount ─────────────────────────────────────────
   useEffect(() => {
     if (!projectId) return
