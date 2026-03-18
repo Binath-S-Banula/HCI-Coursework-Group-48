@@ -46,48 +46,85 @@
   top: 12px;
   left: 14px;
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 260px;
+  padding: 10px 12px;
+  background: rgba(19, 19, 31, 0.84);
+  border: 1px solid rgba(108,99,255,0.22);
+  border-radius: 10px;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 10px 26px rgba(0,0,0,0.32);
+}
+.canvas3d-lighting__header {
+  display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 7px 10px;
-  background: rgba(19, 19, 31, 0.72);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 8px;
-  backdrop-filter: blur(4px);
+  justify-content: space-between;
+  width: 100%;
 }
 .canvas3d-lighting__label {
-  font-size: 11px;
-  color: rgba(255,255,255,0.8);
-  font-weight: 600;
-  width: 100%;
+  font-size: 12px;
+  color: #ecebfd;
+  font-weight: 700;
+}
+.canvas3d-lighting__chip {
+  font-size: 10px;
+  text-transform: capitalize;
+  letter-spacing: 0.02em;
+  color: #d9d5ff;
+  background: rgba(108,99,255,0.2);
+  border: 1px solid rgba(108,99,255,0.38);
+  border-radius: 999px;
+  padding: 3px 8px;
 }
 .canvas3d-lighting__presets {
   display: flex;
+  width: 100%;
+  flex-wrap: wrap;
   gap: 6px;
 }
 .canvas3d-lighting__preset-btn {
-  border: 1px solid rgba(255,255,255,0.15);
-  background: rgba(255,255,255,0.05);
-  color: rgba(255,255,255,0.78);
-  border-radius: 6px;
-  font-size: 10px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.04);
+  color: rgba(239,241,249,0.82);
+  border-radius: 7px;
+  font-size: 11px;
   font-weight: 600;
-  padding: 3px 8px;
+  padding: 5px 10px;
   cursor: pointer;
+  transition: all .15s ease;
+}
+.canvas3d-lighting__preset-btn:hover {
+  border-color: rgba(108,99,255,0.38);
+  background: rgba(108,99,255,0.12);
+  color: #ffffff;
 }
 .canvas3d-lighting__preset-btn--active {
-  border-color: rgba(108,99,255,0.45);
-  background: rgba(108,99,255,0.28);
-  color: #f0eeff;
+  border-color: rgba(108,99,255,0.55);
+  background: linear-gradient(135deg, rgba(108,99,255,0.36), rgba(108,99,255,0.18));
+  color: #f6f5ff;
+}
+.canvas3d-lighting__intensity-row {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+}
+.canvas3d-lighting__intensity-label {
+  font-size: 11px;
+  color: #c8cee1;
 }
 .canvas3d-lighting__slider {
-  width: 130px;
+  width: 100%;
+  accent-color: #8f86ff;
 }
 .canvas3d-lighting__value {
   font-size: 11px;
-  color: #d2d7ee;
-  min-width: 36px;
+  color: #eef0ff;
+  min-width: 40px;
   text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ── Status badges ────────────────────────────────────────────────── */
