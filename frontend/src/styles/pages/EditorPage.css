@@ -15,11 +15,11 @@
   gap: 1rem;
 }
 .editor-topbar__left { display: flex; align-items: center; gap: 0.75rem; }
-.editor-topbar__logo {
-  width: 2rem; height: 2rem; border-radius: 0.5rem;
-  background: linear-gradient(135deg, #6c63ff, #43d9ad);
-  display: flex; align-items: center; justify-content: center;
-  font-weight: 900; font-size: 0.875rem; color: #fff;
+.editor-topbar__logo-image {
+  height: 8.75rem;
+  width: auto;
+  object-fit: contain;
+  flex-shrink: 0;
 }
 .editor-topbar__name { font-family: 'Syne', sans-serif; font-weight: 900; font-size: 0.875rem; color: #e8e8f0; }
 .editor-topbar__project-name {
