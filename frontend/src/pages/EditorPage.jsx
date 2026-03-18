@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
-import { Armchair, ArrowLeft, Grid3X3, Loader2, Minus, Plus, Save } from 'lucide-react'
+import { ArrowLeft, Grid3X3, Loader2, Minus, PanelRightClose, PanelRightOpen, Plus, Save } from 'lucide-react'
 import { setMode, toggleGrid, setZoom } from '../store/slices/editorSlice'
 import Canvas2D from '../components/editor/Canvas2D'
 import Canvas3D from '../components/editor/Canvas3D'
@@ -24,7 +24,7 @@ export default function EditorPage() {
   const [project,       setProject]       = useState(null)
   const [projectName,   setProjectName]   = useState('New Project')
   const [renamingTitle, setRenamingTitle] = useState(false)
-  const [furnitureOpen, setFurnitureOpen] = useState(false)
+  const [furnitureOpen, setFurnitureOpen] = useState(true)
   const [propsOpen,     setPropsOpen]     = useState(false)
   const [isSaving,      setIsSaving]      = useState(false)
   const [lastSaved,     setLastSaved]     = useState(null)
@@ -201,11 +201,6 @@ export default function EditorPage() {
         </div>
 
         <div className="editor-topbar__right">
-          <button
-            onClick={() => setFurnitureOpen(!furnitureOpen)}
-            className={`editor-topbar-btn${furnitureOpen ? ' editor-topbar-btn--active' : ''}`}>
-            <Armchair size={14} /> Furniture
-          </button>
           <button onClick={() => doSave(false)} className="editor-topbar-btn editor-topbar-btn--save">
             {isSaving ? <><Loader2 size={14} className="editor-spin" /> Saving…</> : <><Save size={14} /> Save</>}
           </button>
@@ -250,14 +245,33 @@ export default function EditorPage() {
               <button className="editor-topbar-btn" onClick={() => dispatch(toggleGrid())}><Grid3X3 size={14} /> Grid</button>
             </div>
           )}
-        </div>
 
-        {/* Furniture panel */}
-        {furnitureOpen && (
-          <div className="editor-side-panel editor-side-panel--narrow">
-            <FurniturePanel />
+          <div className={`editor-furniture-dock ${furnitureOpen ? 'editor-furniture-dock--open' : 'editor-furniture-dock--closed'}`}>
+            {furnitureOpen ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setFurnitureOpen(false)}
+                  className="editor-furniture-dock__toggle"
+                  title="Hide furniture sidebar"
+                  aria-label="Hide furniture sidebar">
+                  <PanelRightClose size={14} />
+                </button>
+                <FurniturePanel />
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setFurnitureOpen(true)}
+                className="editor-furniture-dock__toggle editor-furniture-dock__toggle--collapsed"
+                title="Show furniture sidebar"
+                aria-label="Show furniture sidebar">
+                <PanelRightOpen size={14} />
+                <span>Furniture</span>
+              </button>
+            )}
           </div>
-        )}
+        </div>
 
         {/* Properties panel */}
         {propsOpen && (

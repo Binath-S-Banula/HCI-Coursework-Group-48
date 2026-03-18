@@ -4,7 +4,7 @@ const furnitureSlice = createSlice({
   name: 'furniture',
   initialState: {
     items:          [],
-    activeCategory: null,
+    activeCategory: 'sofa',
     searchQuery:    '',
     loading:        false,
     total:          0,

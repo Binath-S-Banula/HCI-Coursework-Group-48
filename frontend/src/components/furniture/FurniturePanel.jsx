@@ -168,7 +168,7 @@ export default function FurniturePanel() {
 
       {/* Header */}
       <div style={{ padding: '12px 14px 10px', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
-        <div style={{ fontWeight: 800, fontSize: 13, fontFamily: 'Syne,sans-serif', color: '#e8e8f0', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+        <div style={{ fontWeight: 700, fontSize: 13, color: '#e8e8f0', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
           <Armchair size={14} /> Furniture
         </div>
       </div>
