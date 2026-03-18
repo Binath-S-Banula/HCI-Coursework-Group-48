@@ -892,9 +892,10 @@ export default function Canvas2D({ onDesignChange }) {
               <button className="canvas2d-toolbar__btn--danger" onClick={() => setBgImage(null)}>✕ BG</button>
             </>
           )}
-          <button className={`canvas2d-toolbar__btn${texPanel ? ' canvas2d-toolbar__btn--active' : ''}`}
+          <button className={`canvas2d-toolbar__btn canvas2d-toolbar__btn--textures${texPanel ? ' canvas2d-toolbar__btn--active' : ''}`}
             onClick={() => setTexPanel(!texPanel)}>
-            Textures
+            <span className="canvas2d-toolbar__btn-label">Textures</span>
+            <span className={`canvas2d-toolbar__btn-caret${texPanel ? ' canvas2d-toolbar__btn-caret--open' : ''}`} aria-hidden="true">▾</span>
           </button>
           {(floorTex || wallTex) && (
             <div className="canvas2d-toolbar__tex-tags">
