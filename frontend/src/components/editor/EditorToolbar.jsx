@@ -15,51 +15,57 @@ export default function EditorToolbar() {
   const { activeTool, mode } = useSelector((s) => s.editor)
 
   return (
-    <div style={{ width: 52, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '12px 0', gap: 4, background: '#13131f', borderRight: '1px solid rgba(255,255,255,0.05)', flexShrink: 0 }}>
+    <aside className="editor-toolbar" aria-label="Editor tools">
+      <p className="editor-toolbar__section-label">Tools</p>
+
       {tools.map((t) => {
         const isActive   = activeTool === t.id
         const isDisabled = mode === '3d' && t.id !== 'select'
         const Icon = t.icon
-        const baseColor = isActive ? '#fff' : isDisabled ? '#3d4256' : '#8b92ad'
+
         return (
-          <div key={t.id} className="relative group">
-            <button
-              onClick={() => !isDisabled && dispatch(setTool(t.id))}
-              title={`${t.label} (${t.key})`}
-              style={{
-                width: 38, height: 38, borderRadius: 10, fontSize: 14,
-                border:      isActive ? '1px solid rgba(108,99,255,0.4)' : '1px solid transparent',
-                background:  isActive ? 'linear-gradient(135deg,rgba(108,99,255,0.3),rgba(108,99,255,0.1))' : 'transparent',
-                color:       baseColor,
-                cursor:      isDisabled ? 'not-allowed' : 'pointer',
-                transition:  'all .15s',
-              }}
-              onMouseEnter={e => { if (!isActive && !isDisabled) e.currentTarget.style.color = '#d2d7ee' }}
-              onMouseLeave={e => { if (!isActive && !isDisabled) e.currentTarget.style.color = '#8b92ad' }}>
-              <Icon size={18} strokeWidth={2.1} />
-            </button>
-            {/* Tooltip */}
-            <div style={{ position: 'absolute', left: 44, top: '50%', transform: 'translateY(-50%)', background: '#1a1a2e', color: '#fff', fontSize: 11, padding: '4px 10px', borderRadius: 7, whiteSpace: 'nowrap', border: '1px solid rgba(255,255,255,0.1)', pointerEvents: 'none', opacity: 0, transition: 'opacity .15s', zIndex: 100 }}
-              className="group-hover:opacity-100">
-              {t.label} <span style={{ color: '#555' }}>{t.key}</span>
-            </div>
-          </div>
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => !isDisabled && dispatch(setTool(t.id))}
+            title={`${t.label} (${t.key})`}
+            disabled={isDisabled}
+            className={`editor-tool-btn ${isActive ? 'editor-tool-btn--active' : 'editor-tool-btn--inactive'} ${isDisabled ? 'editor-tool-btn--disabled' : ''}`}>
+            <span className="editor-tool-btn__icon" aria-hidden="true">
+              <Icon size={17} strokeWidth={2.1} />
+            </span>
+            <span className="editor-tool-btn__label-wrap">
+              <span className="editor-tool-btn__label">{t.label}</span>
+            </span>
+          </button>
         )
       })}
 
-      <div style={{ width: 24, height: 1, background: 'rgba(255,255,255,0.07)', margin: '6px 0' }} />
+      <div className="editor-tool-divider" />
 
-      {/* Undo */}
-      <button title="Undo (Ctrl+Z)" onClick={() => window.__editorUndo?.()}
-        style={{ width: 38, height: 38, borderRadius: 10, background: 'transparent', border: 'none', cursor: 'pointer', color: '#8b92ad', fontSize: 16 }}
-        onMouseEnter={e => e.currentTarget.style.color = '#d2d7ee'}
-        onMouseLeave={e => e.currentTarget.style.color = '#8b92ad'}><Undo2 size={18} strokeWidth={2.1} /></button>
+      <p className="editor-toolbar__section-label">History</p>
 
-      {/* Redo */}
-      <button title="Redo (Ctrl+Y)" onClick={() => window.__editorRedo?.()}
-        style={{ width: 38, height: 38, borderRadius: 10, background: 'transparent', border: 'none', cursor: 'pointer', color: '#8b92ad', fontSize: 16 }}
-        onMouseEnter={e => e.currentTarget.style.color = '#d2d7ee'}
-        onMouseLeave={e => e.currentTarget.style.color = '#8b92ad'}><Redo2 size={18} strokeWidth={2.1} /></button>
-    </div>
+      <button
+        type="button"
+        title="Undo (Ctrl+Z)"
+        onClick={() => window.__editorUndo?.()}
+        className="editor-tool-btn editor-tool-btn--secondary">
+        <span className="editor-tool-btn__icon" aria-hidden="true"><Undo2 size={17} strokeWidth={2.1} /></span>
+        <span className="editor-tool-btn__label-wrap">
+          <span className="editor-tool-btn__label">Undo</span>
+        </span>
+      </button>
+
+      <button
+        type="button"
+        title="Redo (Ctrl+Y)"
+        onClick={() => window.__editorRedo?.()}
+        className="editor-tool-btn editor-tool-btn--secondary">
+        <span className="editor-tool-btn__icon" aria-hidden="true"><Redo2 size={17} strokeWidth={2.1} /></span>
+        <span className="editor-tool-btn__label-wrap">
+          <span className="editor-tool-btn__label">Redo</span>
+        </span>
+      </button>
+    </aside>
   )
 }
