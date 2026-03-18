@@ -4,6 +4,24 @@ const fs = require("fs");
 
 const uploadsRoot = path.resolve(__dirname, "../../uploads");
 
+const CATEGORY_DEFAULT_DIMENSIONS_CM = {
+  sofa: { width: 220, depth: 95, height: 85 },
+  chair: { width: 60, depth: 60, height: 90 },
+  table: { width: 160, depth: 90, height: 75 },
+  bed: { width: 180, depth: 200, height: 55 },
+  storage: { width: 90, depth: 45, height: 200 },
+  lighting: { width: 45, depth: 45, height: 170 },
+  kitchen: { width: 120, depth: 60, height: 90 },
+  bathroom: { width: 80, depth: 60, height: 85 },
+  decor: { width: 60, depth: 60, height: 120 },
+  other: { width: 100, depth: 80, height: 90 },
+};
+
+const normalizeDimension = (value, fallback) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
+
 const deleteUploadedFileByUrl = async (fileUrl) => {
   if (!fileUrl || typeof fileUrl !== "string") return;
 
@@ -93,13 +111,15 @@ const create = async (req, res, next) => {
           message: "name, category and imageUrl are required",
         });
 
+    const defaults = CATEGORY_DEFAULT_DIMENSIONS_CM[category] || CATEGORY_DEFAULT_DIMENSIONS_CM.other;
+
     const item = await Furniture.create({
       name,
       category,
       price,
-      width,
-      depth,
-      height,
+      width: normalizeDimension(width, defaults.width),
+      depth: normalizeDimension(depth, defaults.depth),
+      height: normalizeDimension(height, defaults.height),
       imageUrl,
       model3d,
       model3dName,

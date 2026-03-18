@@ -8,16 +8,17 @@ import { setLightIntensity, setTimeOfDay } from '../../store/slices/editorSlice'
 import '../../styles/editor/Canvas3D.css'
 
 // ── Auto-positions camera when room data arrives ─────────────────────────────
-function CameraController({ hasWalls, cx, cz }) {
+function CameraController({ hasWalls, roomSpanMeters = 4 }) {
   const { camera } = useThree()
   const moved = useRef(false)
 
   useEffect(() => {
     if (hasWalls && !moved.current) {
-      const tx = cx * SCALE
-      const tz = cz * SCALE
-      camera.position.set(tx + 3.2, 3, tz + 4.1)
-      camera.lookAt(tx, 1, tz)
+      const span = Math.min(Math.max(roomSpanMeters, 2.5), 12)
+      const distance = Math.max(3.4, span * 1.05)
+      const height = Math.max(1.5, WALL_HEIGHT * 0.85)
+      camera.position.set(distance * 0.78, height, distance * 1.05)
+      camera.lookAt(0, WALL_HEIGHT * 0.36, 0)
       moved.current = true
     }
     if (!hasWalls) {
@@ -25,14 +26,19 @@ function CameraController({ hasWalls, cx, cz }) {
       camera.position.set(2.8, 2.4, 3.8)
       camera.lookAt(0, 1, 0)
     }
-  }, [hasWalls, cx, cz, camera])
+  }, [hasWalls, roomSpanMeters, camera])
 
   return null
 }
 
 
-const SCALE       = 0.05
-const WALL_HEIGHT = 2.8
+const CM_PER_WORLD_UNIT = 1
+const LEGACY_CM_PER_WORLD_UNIT = 5
+const SCALE = CM_PER_WORLD_UNIT / 100
+const WALL_THICKNESS_CM = 7
+const WALL_THICKNESS = WALL_THICKNESS_CM / 100
+const WALL_HALF_THICKNESS = WALL_THICKNESS / 2
+const WALL_HEIGHT = 1.68
 const MIN_LIGHT_INTENSITY = 0.2
 const MAX_LIGHT_INTENSITY = 2
 const SHADING_PRESETS = {
@@ -79,10 +85,13 @@ function normalizeTimeOfDay(value) {
   return SHADING_PRESETS[normalized] ? normalized : 'day'
 }
 
-function normalizeOpeningWidth(width, fallback = 22) {
+function normalizeOpeningWidthCm(width, fallback = 90) {
   const value = Number(width)
   if (!Number.isFinite(value) || value <= 0) return fallback
-  return value > 45 ? value / 3.5 : value
+  if (value <= 12) return value * 100
+  if (value > 1000) return value / 10
+  if (value <= 45) return value * LEGACY_CM_PER_WORLD_UNIT
+  return value
 }
 
 function shadeColor(color, scalar = 1) {
@@ -120,19 +129,19 @@ function Window3D({ gmx, gmz, gLen, angle, wallColor, design = 'casement' }) {
   return (
     <group position={[gmx, 0, gmz]} rotation={rot}>
       {/* Wall fill below window (sill base) */}
-      <Box args={[gLen, sillY, 0.15]} position={[0, sillY/2, 0]} castShadow receiveShadow>
+      <Box args={[gLen, sillY, WALL_THICKNESS]} position={[0, sillY/2, 0]} castShadow receiveShadow>
         <meshStandardMaterial color={wc} roughness={0.85} side={THREE.DoubleSide} />
       </Box>
       {/* Wall fill above window (lintel) */}
-      <Box args={[gLen, WALL_HEIGHT - topY, 0.15]} position={[0, topY + (WALL_HEIGHT-topY)/2, 0]} castShadow receiveShadow>
+      <Box args={[gLen, WALL_HEIGHT - topY, WALL_THICKNESS]} position={[0, topY + (WALL_HEIGHT-topY)/2, 0]} castShadow receiveShadow>
         <meshStandardMaterial color={wc} roughness={0.85} side={THREE.DoubleSide} />
       </Box>
 
       {/* Wall-colored side fills — close gaps at window sides */}
-      <Box args={[0.15, WALL_HEIGHT, fw]} position={[-gLen/2 - 0.075, WALL_HEIGHT/2, 0]} castShadow receiveShadow>
+      <Box args={[WALL_THICKNESS, WALL_HEIGHT, fw]} position={[-gLen/2 - WALL_HALF_THICKNESS, WALL_HEIGHT/2, 0]} castShadow receiveShadow>
         <meshStandardMaterial color={wc} roughness={0.85} side={THREE.DoubleSide} />
       </Box>
-      <Box args={[0.15, WALL_HEIGHT, fw]} position={[gLen/2 + 0.075, WALL_HEIGHT/2, 0]} castShadow receiveShadow>
+      <Box args={[WALL_THICKNESS, WALL_HEIGHT, fw]} position={[gLen/2 + WALL_HALF_THICKNESS, WALL_HEIGHT/2, 0]} castShadow receiveShadow>
         <meshStandardMaterial color={wc} roughness={0.85} side={THREE.DoubleSide} />
       </Box>
 
@@ -192,19 +201,15 @@ function Window3D({ gmx, gmz, gLen, angle, wallColor, design = 'casement' }) {
           </Box>
         </>
       )}
-
-      {/* Window sill ledge (exterior protrusion) */}
-      <Box args={[gLen + fw*3, 0.05, fd*2.5]} position={[0, sillY - fw - 0.025, fd*0.7]} castShadow receiveShadow>
-        <meshStandardMaterial color="#f5f5f5" roughness={0.2} />
-      </Box>
     </group>
   )
 }
 
 // ── Single Door leaf — hinged on one side ────────────────────────────────────
-function SingleDoorLeaf({ doorW, doorH, isOpen }) {
+function SingleDoorLeaf({ doorW, doorH, isOpen, inwardSign = -1 }) {
   const groupRef = useRef()
-  const openAngle = Math.PI / 2
+  const openAngle = -inwardSign * (Math.PI / 2)
+  const handleZ = -inwardSign * 0.06
   const closedAngle = 0
   const targetRef = useRef(isOpen ? openAngle : closedAngle)
   const currentRef = useRef(isOpen ? openAngle : closedAngle)
@@ -233,7 +238,7 @@ function SingleDoorLeaf({ doorW, doorH, isOpen }) {
         <Box args={[doorW * 0.72, doorH * 0.26, 0.022]} position={[0, doorH * 0.28, 0.041]} castShadow>
           <meshStandardMaterial color="#b89455" roughness={0.55} />
         </Box>
-        <Box args={[0.045, 0.045, 0.09]} position={[doorW * 0.38, doorH * 0.46, 0.06]} castShadow>
+        <Box args={[0.045, 0.045, 0.09]} position={[doorW * 0.38, doorH * 0.46, handleZ]} castShadow>
           <meshStandardMaterial color="#d4a820" roughness={0.05} metalness={0.95} />
         </Box>
       </group>
@@ -242,10 +247,11 @@ function SingleDoorLeaf({ doorW, doorH, isOpen }) {
 }
 
 // ── Double Door 3D — two leaves swinging inward ──────────────────────────────
-function DoubleDoorLeaf({ halfW, doorH, isOpen, side }) {
+function DoubleDoorLeaf({ halfW, doorH, isOpen, side, inwardSign = -1 }) {
   const groupRef   = useRef()
-  // Both leaves swing inward (into the room)
-  const openAngle   = side === 'left' ? Math.PI / 2 : -Math.PI / 2
+  const baseAngle = side === 'left' ? 1 : -1
+  const openAngle   = baseAngle * (-inwardSign) * (Math.PI / 2)
+  const handleZ = -inwardSign * 0.06
   const closedAngle = 0
   const targetRef  = useRef(isOpen ? openAngle : closedAngle)
   const currentRef = useRef(isOpen ? openAngle : closedAngle)
@@ -285,7 +291,7 @@ function DoubleDoorLeaf({ halfW, doorH, isOpen, side }) {
         </Box>
         {/* Knob on meeting edge */}
         <Box args={[0.04, 0.04, 0.09]}
-          position={[side === 'left' ? lw*0.42 : -lw*0.42, doorH*0.46, 0.06]}
+          position={[side === 'left' ? lw*0.42 : -lw*0.42, doorH*0.46, handleZ]}
           castShadow>
           <meshStandardMaterial color="#d4a820" roughness={0.05} metalness={0.95} />
         </Box>
@@ -306,10 +312,10 @@ function DoubleDoorLeaf({ halfW, doorH, isOpen, side }) {
   )
 }
 
-function Door3D({ gmx, gmz, gLen, angle, wallColor, design = 'double' }) {
+function Door3D({ gmx, gmz, gLen, angle, wallColor, design = 'double', inwardSign = -1 }) {
   const fw    = 0.06
-  const fd    = 0.15
-  const wt    = 0.15   // wall thickness
+  const fd    = WALL_THICKNESS
+  const wt    = WALL_THICKNESS   // wall thickness
   const doorH = WALL_HEIGHT - 0.25
   const rot   = [0, -angle, 0]
   const wc    = wallColor || '#e8e2d8'
@@ -342,14 +348,14 @@ function Door3D({ gmx, gmz, gLen, angle, wallColor, design = 'double' }) {
           <meshStandardMaterial color="#d4c4a8" roughness={0.4} />
         </Box>
 
-        <SingleDoorLeaf doorW={gLen} doorH={doorH} isOpen={isOpen} />
+        <SingleDoorLeaf doorW={gLen} doorH={doorH} isOpen={isOpen} inwardSign={inwardSign} />
 
         <Box args={[gLen, 0.025, fd * 1.3]} position={[0, 0.012, 0]} receiveShadow>
           <meshStandardMaterial color="#b0a090" roughness={0.35} metalness={0.25} />
         </Box>
 
         <mesh position={[0, doorH / 2, 0]} onClick={() => setIsOpen((open) => !open)}>
-          <boxGeometry args={[gLen + 0.15, doorH, 0.5]} />
+          <boxGeometry args={[gLen + WALL_THICKNESS, doorH, 0.5]} />
           <meshBasicMaterial transparent opacity={0} depthWrite={false} />
         </mesh>
 
@@ -437,9 +443,9 @@ function Door3D({ gmx, gmz, gLen, angle, wallColor, design = 'double' }) {
       </Box>
 
       {/* Left leaf — hinged at left, swings inward */}
-      <DoubleDoorLeaf halfW={halfW} doorH={doorH} isOpen={isOpen} side="left" />
+      <DoubleDoorLeaf halfW={halfW} doorH={doorH} isOpen={isOpen} side="left" inwardSign={inwardSign} />
       {/* Right leaf — hinged at right, swings inward */}
-      <DoubleDoorLeaf halfW={halfW} doorH={doorH} isOpen={isOpen} side="right" />
+      <DoubleDoorLeaf halfW={halfW} doorH={doorH} isOpen={isOpen} side="right" inwardSign={inwardSign} />
 
       {/* Threshold */}
       <Box args={[gLen, 0.025, fd * 1.3]} position={[0, 0.012, 0]} receiveShadow>
@@ -448,7 +454,7 @@ function Door3D({ gmx, gmz, gLen, angle, wallColor, design = 'double' }) {
 
       {/* Click target */}
       <mesh position={[0, doorH / 2, 0]} onClick={() => setIsOpen(o => !o)}>
-        <boxGeometry args={[gLen + 0.15, doorH, 0.5]} />
+          <boxGeometry args={[gLen + WALL_THICKNESS, doorH, 0.5]} />
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
 
@@ -471,7 +477,7 @@ function WallSegment({ sx, sz, ex, ez, wallTexUrl, wallColor }) {
   const texture = wallTexUrl ? useTexture(wallTexUrl) : null
   if (texture) { texture.wrapS = THREE.RepeatWrapping; texture.wrapT = THREE.RepeatWrapping; texture.repeat.set(len, WALL_HEIGHT / 2) }
   return (
-    <Box args={[len, WALL_HEIGHT, 0.15]} position={[midX, WALL_HEIGHT / 2, midZ]} rotation={[0, -angle, 0]} castShadow receiveShadow>
+    <Box args={[len, WALL_HEIGHT, WALL_THICKNESS]} position={[midX, WALL_HEIGHT / 2, midZ]} rotation={[0, -angle, 0]} castShadow receiveShadow>
       <meshStandardMaterial map={texture || undefined} color={texture ? undefined : (wallColor || '#e8e2d8')} roughness={0.85} side={THREE.DoubleSide} />
     </Box>
   )
@@ -482,6 +488,13 @@ function Wall3D({ wall, wallTexUrl, wallColor, cx, cz, openings }) {
   const ex0 = (wall.end.x   - cx) * SCALE, ez0 = (wall.end.y   - cz) * SCALE
   const dx = ex0 - sx0, dz = ez0 - sz0
   const totalLen = Math.sqrt(dx * dx + dz * dz)
+  const mx = (sx0 + ex0) / 2
+  const mz = (sz0 + ez0) / 2
+  const nPlusX = totalLen > 0 ? -dz / totalLen : 0
+  const nPlusZ = totalLen > 0 ? dx / totalLen : 0
+  const toCenterX = -mx
+  const toCenterZ = -mz
+  const inwardSign = (nPlusX * toCenterX + nPlusZ * toCenterZ) >= 0 ? 1 : -1
 
   const wallOpenings = openings
     .filter(o => o.wallId === wall.id)
@@ -494,7 +507,7 @@ function Wall3D({ wall, wallTexUrl, wallColor, cx, cz, openings }) {
   const segments = []
   let prevT = 0
   wallOpenings.forEach(op => {
-    const openingWidth = normalizeOpeningWidth(op.width, op.type === 'door' ? 26 : 24)
+    const openingWidth = normalizeOpeningWidthCm(op.width, op.type === 'door' ? 90 : 120)
     const halfW = (openingWidth * SCALE) / 2 / totalLen
     const t1 = Math.max(prevT, op.t - halfW)
     const t2 = Math.min(1, op.t + halfW)
@@ -511,7 +524,7 @@ function Wall3D({ wall, wallTexUrl, wallColor, cx, cz, openings }) {
     if (op.type === 'window') {
       segments.push({ window3d: true, gmx, gmz, gLen, angle, design })
     } else {
-      segments.push({ door3d: true, gmx, gmz, gLen, angle, design })
+      segments.push({ door3d: true, gmx, gmz, gLen, angle, design, inwardSign })
     }
     prevT = t2
   })
@@ -526,7 +539,7 @@ function Wall3D({ wall, wallTexUrl, wallColor, cx, cz, openings }) {
           return <WallSegment key={i} sx={ax} sz={az} ex={bx} ez={bz} wallTexUrl={wallTexUrl} wallColor={wallColor} />
         }
         if (seg.window3d) return <Window3D key={i} gmx={seg.gmx} gmz={seg.gmz} gLen={seg.gLen} angle={seg.angle} wallColor={wallColor} design={seg.design} />
-        if (seg.door3d)   return <Door3D   key={i} gmx={seg.gmx} gmz={seg.gmz} gLen={seg.gLen} angle={seg.angle} wallColor={wallColor} design={seg.design} />
+        if (seg.door3d)   return <Door3D   key={i} gmx={seg.gmx} gmz={seg.gmz} gLen={seg.gLen} angle={seg.angle} wallColor={wallColor} design={seg.design} inwardSign={seg.inwardSign} />
         return null
       })}
     </group>
@@ -615,8 +628,8 @@ function Bed3D({ w, d, color }) {
 
 function Sofa3D({ w, d, color }) {
   const base = shadeColor(color || '#7272a0', 1)
-  const sw    = Math.min(w, 2.4)
-  const sd    = Math.min(d, 0.95)
+  const sw    = Math.max(w, 0.45)
+  const sd    = Math.max(d, 0.45)
   const sh    = 0.40
   const legH  = 0.10
   const legW  = 0.07
@@ -667,9 +680,8 @@ function Sofa3D({ w, d, color }) {
 
 function Chair3D({ w, d, color }) {
   const wood = shadeColor(color || '#7a5535', 1)
-  // Cap to realistic chair size (max ~0.65m) regardless of canvas item size
-  const cw = Math.min(w, 0.65)
-  const cd = Math.min(d, 0.65)
+  const cw = Math.max(w, 0.35)
+  const cd = Math.max(d, 0.35)
   const legH = 0.42
   const legW = 0.06
 
@@ -704,8 +716,8 @@ function Chair3D({ w, d, color }) {
 
 function Table3D({ w, d, color }) {
   const wood = shadeColor(color || '#c8a228', 1)
-  const tw     = Math.min(w, 2.0)   // cap width
-  const td     = Math.min(d, 1.2)   // cap depth
+  const tw     = Math.max(w, 0.45)
+  const td     = Math.max(d, 0.45)
   const legH   = 0.72
   const topH   = 0.05
   const legW   = 0.07
@@ -770,7 +782,7 @@ function Lighting3D({ w, d, color }) {
       <Box args={[0.06,1.5,0.06]} position={[0,0.75,0]} castShadow>
         <meshStandardMaterial color="#aaa" roughness={0.3} metalness={0.6} />
       </Box>
-      <Box args={[Math.min(w,0.45), 0.22, Math.min(d,0.45)]} position={[0,1.56,0]} castShadow>
+      <Box args={[Math.max(w, 0.2), 0.22, Math.max(d, 0.2)]} position={[0,1.56,0]} castShadow>
         <meshStandardMaterial color={lampColor} roughness={0.05} emissive={shadeColor(lampColor, 0.75)} emissiveIntensity={0.7} />
       </Box>
     </group>
@@ -857,8 +869,8 @@ function CustomModel({ url, w, d, color }) {
 function FurnitureItem3D({ item, cx, cz }) {
   const x   = (item.x - cx) * SCALE + (item.w * SCALE) / 2
   const z   = (item.y - cz) * SCALE + (item.h * SCALE) / 2
-  const w   = Math.max((item.w || 80) * SCALE, 0.3)
-  const d   = Math.max((item.h || 80) * SCALE, 0.3)
+  const w   = Math.max((item.w || 80) * SCALE, 0.08)
+  const d   = Math.max((item.h || 80) * SCALE, 0.08)
   const cat = (item.cat || item.category || item.name || '').toLowerCase()
   const color = item.color || null
 
@@ -902,11 +914,11 @@ function DemoRoom({ wallTexUrl, floorTexUrl, wallColor }) {
     <group>
       <Plane args={[10, 8]} rotation={[-Math.PI/2, 0, 0]} receiveShadow>{floorMat}</Plane>
       {/* back wall */}
-      <Box args={[10, WALL_HEIGHT, 0.15]} position={[0, WALL_HEIGHT/2, -4]} castShadow receiveShadow>{wallMat}</Box>
+      <Box args={[10, WALL_HEIGHT, WALL_THICKNESS]} position={[0, WALL_HEIGHT/2, -4]} castShadow receiveShadow>{wallMat}</Box>
       {/* left wall */}
-      <Box args={[8, WALL_HEIGHT, 0.15]} position={[-5, WALL_HEIGHT/2, 0]} rotation={[0, Math.PI/2, 0]} castShadow receiveShadow>{wallMat}</Box>
+      <Box args={[8, WALL_HEIGHT, WALL_THICKNESS]} position={[-5, WALL_HEIGHT/2, 0]} rotation={[0, Math.PI/2, 0]} castShadow receiveShadow>{wallMat}</Box>
       {/* right wall */}
-      <Box args={[8, WALL_HEIGHT, 0.15]} position={[5, WALL_HEIGHT/2, 0]} rotation={[0, Math.PI/2, 0]} castShadow receiveShadow>{wallMat}</Box>
+      <Box args={[8, WALL_HEIGHT, WALL_THICKNESS]} position={[5, WALL_HEIGHT/2, 0]} rotation={[0, Math.PI/2, 0]} castShadow receiveShadow>{wallMat}</Box>
 
       {/* sofa */}
       <group position={[0, 0, -2.5]}>
@@ -950,6 +962,7 @@ export default function Canvas3D() {
   const timeOfDay = useSelector((s) => s.editor.timeOfDay)
   const [liveData, setLiveData] = useState({ walls: [], floor: null, placed: [], openings: [], floorTex: null, floorColor: '#f5f2ee', wallTex: null, wallColor: '#e8e2d8' })
   const [isShadingMinimized, setIsShadingMinimized] = useState(true)
+  const [canvasResetKey, setCanvasResetKey] = useState(0)
 
   const readEditorState = () => ({
     walls: window.__editorWalls || [],
@@ -1010,22 +1023,31 @@ export default function Canvas3D() {
     return () => window.removeEventListener('editor-state-change', applyState)
   }, [])
 
+  useEffect(() => {
+    const handleReset = () => {
+      setCanvasResetKey((prev) => prev + 1)
+    }
+    window.addEventListener('editor-3d-reset', handleReset)
+    return () => window.removeEventListener('editor-3d-reset', handleReset)
+  }, [])
+
   const hasDesign = liveData.walls.length > 0 || liveData.placed.length > 0 || (liveData.floor && liveData.floor.w > 0 && liveData.floor.h > 0)
   const preset = SHADING_PRESETS[normalizeTimeOfDay(timeOfDay)]
 
-  // Position camera above and in front of room
-  const { cx: rcx, cz: rcz } = useMemo(() => getSceneCenter(liveData.walls, liveData.floor), [liveData.walls, liveData.floor])
+  const { width: sceneWidth, depth: sceneDepth } = useMemo(() => getSceneBounds(liveData.walls, liveData.floor), [liveData.walls, liveData.floor])
+  const roomSpanMeters = Math.max(sceneWidth, sceneDepth) * SCALE
 
   return (
     <div className="canvas3d-root">
       <Canvas
+        key={canvasResetKey}
         shadows
         camera={{ position: [2.8, 2.4, 3.8], fov: 50 }}
         style={{ background: preset.skyColor }}
         gl={{ preserveDrawingBuffer: true }}
       >
         <Suspense fallback={null}>
-          <CameraController hasWalls={hasDesign} cx={rcx} cz={rcz} />
+          <CameraController hasWalls={hasDesign} roomSpanMeters={roomSpanMeters} />
           <ambientLight intensity={preset.ambient * lightIntensity} />
           <directionalLight position={[10, 12, 8]} intensity={preset.directional * lightIntensity} castShadow
             shadow-mapSize={[1024, 1024]}
@@ -1060,7 +1082,7 @@ export default function Canvas3D() {
 
           <OrbitControls
             enableDamping dampingFactor={0.05}
-            minDistance={2} maxDistance={30}
+            minDistance={3} maxDistance={30}
             maxPolarAngle={Math.PI / 2.05}
             target={[0, 1, 0]}
           />
@@ -1148,4 +1170,18 @@ export default function Canvas3D() {
       </div>
     </div>
   )
+}
+
+function getSceneBounds(walls, floor) {
+  const xs = walls.flatMap(w => [w.start.x, w.end.x])
+  const ys = walls.flatMap(w => [w.start.y, w.end.y])
+  if (floor && floor.w > 0 && floor.h > 0) {
+    xs.push(floor.x, floor.x + floor.w)
+    ys.push(floor.y, floor.y + floor.h)
+  }
+  if (!xs.length || !ys.length) return { width: 0, depth: 0 }
+  return {
+    width: Math.max(...xs) - Math.min(...xs),
+    depth: Math.max(...ys) - Math.min(...ys),
+  }
 }

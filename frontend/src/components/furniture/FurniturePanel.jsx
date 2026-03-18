@@ -29,6 +29,29 @@ const ICONS = {
   default: <svg width="56" height="56" viewBox="0 0 48 48" fill="none"><rect x="8" y="8" width="32" height="32" rx="4" fill="#6c63ff" opacity="0.5"/></svg>,
 }
 
+const DEFAULT_SIZE_BY_CATEGORY_CM = {
+  sofa: { w: 220, d: 95 },
+  chair: { w: 60, d: 60 },
+  table: { w: 160, d: 90 },
+  bed: { w: 180, d: 200 },
+  storage: { w: 90, d: 45 },
+  lighting: { w: 45, d: 45 },
+  kitchen: { w: 120, d: 60 },
+  bathroom: { w: 80, d: 60 },
+  decor: { w: 60, d: 60 },
+  other: { w: 100, d: 80 },
+}
+
+const getDefaultSizeByCategory = (category) => {
+  const key = String(category || '').toLowerCase()
+  return DEFAULT_SIZE_BY_CATEGORY_CM[key] || DEFAULT_SIZE_BY_CATEGORY_CM.other
+}
+
+const normalizeSize = (value, fallback) => {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
+}
+
 const ITEMS = []
 
 // Single item card — always same fixed size
@@ -131,16 +154,19 @@ export default function FurniturePanel() {
     const loadFurniture = async () => {
       try {
         const res = await furnitureService.getAll({ limit: 500 })
-        const mapped = (res.data || []).map((f) => ({
-          id: f._id,
-          name: f.name,
-          cat: f.category,
-          w: f.width || 80,
-          d: f.depth || 80,
-          image: f.imageUrl,
-          model3d: f.model3d || null,
-          isAdmin: true,
-        }))
+        const mapped = (res.data || []).map((f) => {
+          const defaults = getDefaultSizeByCategory(f.category)
+          return {
+            id: f._id,
+            name: f.name,
+            cat: f.category,
+            w: normalizeSize(f.width, defaults.w),
+            d: normalizeSize(f.depth, defaults.d),
+            image: f.imageUrl,
+            model3d: f.model3d || null,
+            isAdmin: true,
+          }
+        })
         setItems(mapped)
       } catch {
         setItems([])

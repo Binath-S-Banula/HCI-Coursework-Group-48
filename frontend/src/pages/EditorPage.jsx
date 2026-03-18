@@ -28,7 +28,13 @@ export default function EditorPage() {
   const [propsOpen,     setPropsOpen]     = useState(false)
   const [isSaving,      setIsSaving]      = useState(false)
   const [lastSaved,     setLastSaved]     = useState(null)
+  const [canvas3DSessionKey, setCanvas3DSessionKey] = useState(() => Date.now())
   const autoSaveTimer = useRef(null)
+
+  useEffect(() => {
+    setCanvas3DSessionKey(Date.now())
+    window.dispatchEvent(new Event('editor-3d-reset'))
+  }, [projectId])
 
   useEffect(() => {
     if (searchParams.get('view') === '3d') {
@@ -60,6 +66,7 @@ export default function EditorPage() {
 
         // Signal canvases to reload from globals
         window.__editorRestoreSignal = Date.now()
+        window.dispatchEvent(new Event('editor-3d-reset'))
       } catch {
         toast.error('Project not found')
         navigate('/dashboard')
@@ -226,7 +233,7 @@ export default function EditorPage() {
 
           {project && mode === '3d' && (
             <div style={{ position:'absolute', inset:0, display:'block' }}>
-              <Canvas3D />
+              <Canvas3D key={`${projectId || 'project-3d-default'}-${canvas3DSessionKey}`} />
             </div>
           )}
 

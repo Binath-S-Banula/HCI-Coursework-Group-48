@@ -3,30 +3,64 @@ import { ChevronDown } from 'lucide-react'
 import '../../styles/editor/Canvas2D.css'
 import { useSelector } from 'react-redux'
 
-const GRID = 20
+const GRID = 10
+const CM_PER_WORLD_UNIT = 1
+const LEGACY_CM_PER_WORLD_UNIT = 5
+const WORLD_UNITS_PER_CM = 1 / CM_PER_WORLD_UNIT
+const WALL_THICKNESS_CM = 7
+const WALL_THICKNESS_WORLD = WALL_THICKNESS_CM * WORLD_UNITS_PER_CM
+const WALL_HALF_THICKNESS_WORLD = WALL_THICKNESS_WORLD / 2
 const snap = (v) => Math.round(v / GRID) * GRID
 const HANDLE_R = 6   // corner handle radius (world px)
 const ROT_OFFSET = 28 // rotate handle distance above item
 
+const worldToCm = (worldValue) => Math.round(Number(worldValue || 0) * CM_PER_WORLD_UNIT)
+const cmToWorld = (cmValue) => Number(cmValue || 0) * WORLD_UNITS_PER_CM
+
 const OPENING_PRESETS = {
   door: {
-    single: { width: 26, label: 'Single Door' },
-    double: { width: 38, label: 'Double Door' },
-    sliding: { width: 32, label: 'Sliding Door' },
+    single: { width: 90, label: 'Single Door' },
+    double: { width: 160, label: 'Double Door' },
+    sliding: { width: 150, label: 'Sliding Door' },
   },
   window: {
-    casement: { width: 24, label: 'Casement Window' },
-    sliding: { width: 32, label: 'Sliding Window' },
-    bay: { width: 38, label: 'Bay Window' },
+    casement: { width: 120, label: 'Casement Window' },
+    sliding: { width: 150, label: 'Sliding Window' },
+    bay: { width: 180, label: 'Bay Window' },
   },
 }
 
 const getAdminAssets = () => JSON.parse(localStorage.getItem('adminAssets') || '{"furniture":[],"textures":[]}')
 
-const normalizeOpeningWidth = (width, fallback = 22) => {
+const normalizeOpeningWidthCm = (width, fallback = 90) => {
   const value = Number(width)
   if (!Number.isFinite(value) || value <= 0) return fallback
-  return value > 45 ? value / 3.5 : value
+  if (value <= 12) return value * 100
+  if (value > 1000) return value / 10
+  if (value <= 45) return value * LEGACY_CM_PER_WORLD_UNIT
+  return value
+}
+
+const normalizeFurnitureSizeCm = (value, fallback = 80) => {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed) || parsed <= 0) return fallback
+  if (parsed <= 12) return parsed * 100
+  if (parsed > 1000) return parsed / 10
+  return parsed
+}
+
+const getDefaultFurnitureSizeCm = (categoryOrName = '') => {
+  const key = String(categoryOrName || '').toLowerCase()
+  if (key.includes('sofa') || key.includes('couch')) return { width: 220, depth: 95 }
+  if (key.includes('chair') || key.includes('armchair') || key.includes('stool')) return { width: 60, depth: 60 }
+  if (key.includes('table') || key.includes('desk') || key.includes('coffee')) return { width: 160, depth: 90 }
+  if (key.includes('bed')) return { width: 180, depth: 200 }
+  if (key.includes('storage') || key.includes('cabinet') || key.includes('shelf') || key.includes('wardrobe')) return { width: 90, depth: 45 }
+  if (key.includes('light') || key.includes('lamp')) return { width: 45, depth: 45 }
+  if (key.includes('kitchen')) return { width: 120, depth: 60 }
+  if (key.includes('bathroom')) return { width: 80, depth: 60 }
+  if (key.includes('decor')) return { width: 60, depth: 60 }
+  return { width: 100, depth: 80 }
 }
 
 // ── Hit-test helpers ─────────────────────────────────────────────────────────
@@ -377,9 +411,20 @@ export default function Canvas2D({ onDesignChange }) {
     }
 
     if (showGrid) {
-      ctx.strokeStyle = 'rgba(0,0,0,0.06)'; ctx.lineWidth = 0.5
-      for (let x = 0; x < W / zoom; x += GRID) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H / zoom); ctx.stroke() }
-      for (let y = 0; y < H / zoom; y += GRID) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W / zoom, y); ctx.stroke() }
+      const minorStep = GRID
+      const majorStep = GRID * 10
+
+      // Minor grid: 10 cm per square
+      ctx.strokeStyle = 'rgba(0,0,0,0.055)'
+      ctx.lineWidth = 0.45
+      for (let x = 0; x < W / zoom; x += minorStep) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H / zoom); ctx.stroke() }
+      for (let y = 0; y < H / zoom; y += minorStep) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W / zoom, y); ctx.stroke() }
+
+      // Major grid: each large square is 10x10 minor squares (1m x 1m)
+      ctx.strokeStyle = 'rgba(0,0,0,0.12)'
+      ctx.lineWidth = 0.9
+      for (let x = 0; x < W / zoom; x += majorStep) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H / zoom); ctx.stroke() }
+      for (let y = 0; y < H / zoom; y += majorStep) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W / zoom, y); ctx.stroke() }
     }
 
     // ── Draw placed furniture ──────────────────────────────────────────
@@ -452,7 +497,7 @@ export default function Canvas2D({ onDesignChange }) {
         const bw = 52 / zoom, bh = 16 / zoom
         ctx.beginPath(); ctx.roundRect(cx - bw / 2, y + h + 16 / zoom, bw, bh, 3 / zoom); ctx.fill()
         ctx.fillStyle = '#fff'; ctx.font = `bold ${9 / zoom}px DM Sans,sans-serif`; ctx.textAlign = 'center'
-        ctx.fillText(`${Math.round(w * 5)}×${Math.round(h * 5)}cm`, cx, y + h + 27 / zoom)
+        ctx.fillText(`${worldToCm(w)}×${worldToCm(h)}cm`, cx, y + h + 27 / zoom)
       }
     })
 
@@ -463,7 +508,7 @@ export default function Canvas2D({ onDesignChange }) {
         ctx.save()
         const dx = wall.end.x - wall.start.x, dy = wall.end.y - wall.start.y
         const len = Math.sqrt(dx * dx + dy * dy)
-        const nx = -dy / len * 5, ny = dx / len * 5
+        const nx = -dy / len * WALL_HALF_THICKNESS_WORLD, ny = dx / len * WALL_HALF_THICKNESS_WORLD
         ctx.beginPath()
         ctx.moveTo(wall.start.x + nx, wall.start.y + ny)
         ctx.lineTo(wall.end.x + nx, wall.end.y + ny)
@@ -477,7 +522,7 @@ export default function Canvas2D({ onDesignChange }) {
         ctx.save()
         const dx2 = wall.end.x - wall.start.x, dy2 = wall.end.y - wall.start.y
         const len2 = Math.sqrt(dx2 * dx2 + dy2 * dy2)
-        const nx2 = -dy2 / len2 * 5, ny2 = dx2 / len2 * 5
+        const nx2 = -dy2 / len2 * WALL_HALF_THICKNESS_WORLD, ny2 = dx2 / len2 * WALL_HALF_THICKNESS_WORLD
         ctx.beginPath()
         ctx.moveTo(wall.start.x + nx2, wall.start.y + ny2)
         ctx.lineTo(wall.end.x + nx2, wall.end.y + ny2)
@@ -488,12 +533,12 @@ export default function Canvas2D({ onDesignChange }) {
         ctx.restore()
       }
       ctx.strokeStyle = sel ? '#6c63ff' : wallColor
-      ctx.lineWidth = sel ? 10 : 8; ctx.lineCap = 'round'
+      ctx.lineWidth = sel ? WALL_THICKNESS_WORLD + 2 : WALL_THICKNESS_WORLD; ctx.lineCap = 'round'
       ctx.beginPath(); ctx.moveTo(wall.start.x, wall.start.y); ctx.lineTo(wall.end.x, wall.end.y); ctx.stroke()
       ctx.fillStyle = '#43d9ad'
       ;[wall.start, wall.end].forEach(p => { ctx.beginPath(); ctx.arc(p.x, p.y, 5, 0, Math.PI * 2); ctx.fill() })
       const dx = wall.end.x - wall.start.x, dy = wall.end.y - wall.start.y
-      const len = Math.round(Math.sqrt(dx * dx + dy * dy) * 5)
+      const len = worldToCm(Math.sqrt(dx * dx + dy * dy))
       const mx = (wall.start.x + wall.end.x) / 2, my = (wall.start.y + wall.end.y) / 2
       ctx.fillStyle = 'rgba(108,99,255,0.85)'; ctx.beginPath(); ctx.roundRect(mx - 24, my - 20, 48, 16, 3); ctx.fill()
       ctx.fillStyle = '#fff'; ctx.font = 'bold 10px DM Sans,sans-serif'; ctx.textAlign = 'center'
@@ -502,6 +547,19 @@ export default function Canvas2D({ onDesignChange }) {
 
 
     // ── Draw openings (doors & windows) on walls ──────────────────────────────
+    const roomCenter = (() => {
+      if (floorRect && floorRect.w > 0 && floorRect.h > 0) {
+        return { x: floorRect.x + floorRect.w / 2, y: floorRect.y + floorRect.h / 2 }
+      }
+      if (!walls.length) return null
+      const xs = walls.flatMap(w => [w.start.x, w.end.x])
+      const ys = walls.flatMap(w => [w.start.y, w.end.y])
+      return {
+        x: (Math.min(...xs) + Math.max(...xs)) / 2,
+        y: (Math.min(...ys) + Math.max(...ys)) / 2,
+      }
+    })()
+
     openings.forEach(op => {
       const wall = walls.find(w => w.id === op.wallId)
       if (!wall) return
@@ -509,16 +567,18 @@ export default function Canvas2D({ onDesignChange }) {
       const len = Math.sqrt(dx*dx + dy*dy)
       const ux = dx/len, uy = dy/len   // unit along wall
       const nx = -uy, ny = ux           // unit normal to wall
-      const openingWidth = normalizeOpeningWidth(op.width, op.type === 'door' ? 26 : 24)
+      const openingWidthCm = normalizeOpeningWidthCm(op.width, op.type === 'door' ? 90 : 120)
+      const openingWidth = cmToWorld(openingWidthCm)
       const W2 = openingWidth / 2
       const cx = wall.start.x + dx*op.t
       const cy = wall.start.y + dy*op.t
+      const inwardSign = roomCenter && (((roomCenter.x - cx) * nx + (roomCenter.y - cy) * ny) < 0) ? -1 : 1
       const isSel = selectedOpening === op.id
 
       // Clear the wall gap — draw floor color over wall
       ctx.save()
       ctx.strokeStyle = floorColor || '#f5f2ee'
-      ctx.lineWidth = 12
+      ctx.lineWidth = WALL_THICKNESS_WORLD + 2
       ctx.lineCap = 'butt'
       ctx.beginPath()
       ctx.moveTo(cx - ux*W2, cy - uy*W2)
@@ -552,6 +612,28 @@ export default function Canvas2D({ onDesignChange }) {
           ctx.moveTo(cx - nx * 7, cy - ny * 7)
           ctx.lineTo(cx + nx * 7, cy + ny * 7)
           ctx.stroke()
+
+          // Inward swing arcs for both leaves
+          const wallAngle = Math.atan2(uy, ux)
+          const leftHx = cx - ux * W2
+          const leftHy = cy - uy * W2
+          const rightHx = cx + ux * W2
+          const rightHy = cy + uy * W2
+          const leftStart = wallAngle
+          const leftEnd = wallAngle + inwardSign * (Math.PI / 2)
+          const rightStart = wallAngle + Math.PI
+          const rightEnd = rightStart - inwardSign * (Math.PI / 2)
+
+          ctx.strokeStyle = isSel ? 'rgba(108,99,255,0.5)' : 'rgba(45,106,79,0.4)'
+          ctx.lineWidth = 1
+          ctx.setLineDash([3, 3])
+          ctx.beginPath()
+          ctx.arc(leftHx, leftHy, W2, leftStart, leftEnd, inwardSign < 0)
+          ctx.stroke()
+          ctx.beginPath()
+          ctx.arc(rightHx, rightHy, W2, rightStart, rightEnd, inwardSign > 0)
+          ctx.stroke()
+          ctx.setLineDash([])
         } else if (design === 'sliding') {
           ctx.strokeStyle = doorStroke
           ctx.lineWidth = 2
@@ -577,8 +659,10 @@ export default function Canvas2D({ onDesignChange }) {
           ctx.lineWidth = 1
           ctx.setLineDash([3, 3])
           ctx.beginPath()
-          const startAngle = Math.atan2(-ux, uy)
-          ctx.arc(cx - ux * W2, cy - uy * W2, openingWidth, startAngle, startAngle + Math.PI / 2)
+          const wallAngle = Math.atan2(uy, ux)
+          const startAngle = wallAngle
+          const endAngle = wallAngle + inwardSign * (Math.PI / 2)
+          ctx.arc(cx - ux * W2, cy - uy * W2, openingWidth, startAngle, endAngle, inwardSign < 0)
           ctx.stroke()
           ctx.setLineDash([])
         }
@@ -592,7 +676,7 @@ export default function Canvas2D({ onDesignChange }) {
 
         // Window: base glass fill
         ctx.save()
-        const wh = 8 // window visual half-width perpendicular
+        const wh = Math.max(6, WALL_HALF_THICKNESS_WORLD) // window visual half-width perpendicular
         ctx.fillStyle = 'rgba(173,216,230,0.55)'
         ctx.beginPath()
         ctx.moveTo(cx - ux*W2 + nx*wh, cy - uy*W2 + ny*wh)
@@ -654,7 +738,7 @@ export default function Canvas2D({ onDesignChange }) {
       ctx.beginPath(); ctx.moveTo(drawStart.x, drawStart.y); ctx.lineTo(ex, ey); ctx.stroke()
       ctx.setLineDash([])
       const dx = ex - drawStart.x, dy = ey - drawStart.y
-      const len = Math.round(Math.sqrt(dx * dx + dy * dy) * 5)
+      const len = worldToCm(Math.sqrt(dx * dx + dy * dy))
       const mx = (drawStart.x + ex) / 2, my = (drawStart.y + ey) / 2
       ctx.fillStyle = 'rgba(108,99,255,0.9)'; ctx.beginPath(); ctx.roundRect(mx - 28, my - 21, 56, 17, 4); ctx.fill()
       ctx.fillStyle = '#fff'; ctx.font = 'bold 11px DM Sans,sans-serif'; ctx.textAlign = 'center'
@@ -811,7 +895,7 @@ export default function Canvas2D({ onDesignChange }) {
           t: nearest.t,
           type: activeTool,
           design: preset ? selectedDesign : (activeTool === 'door' ? 'single' : 'casement'),
-          width: preset?.width || (activeTool === 'door' ? 26 : 60),
+          width: preset?.width || (activeTool === 'door' ? 90 : 120),
         }
         const newOpenings = [...openingsRef.current, newOpening]
         pushHistory(wallsRef.current, placedRef.current, newOpenings)
@@ -1163,14 +1247,19 @@ export default function Canvas2D({ onDesignChange }) {
     const raw = e.dataTransfer.getData('furniture'); if (!raw) return
     const item = JSON.parse(raw)
     const r = canvasRef.current.getBoundingClientRect()
-    const x = snap((e.clientX - r.left - panRef.current.x) / zoomRef.current - 40)
-    const y = snap((e.clientY - r.top  - panRef.current.y) / zoomRef.current - 40)
+    const defaults = getDefaultFurnitureSizeCm(item.cat || item.category || item.name)
+    const sourceWidthCm = normalizeFurnitureSizeCm(item.w ?? item.width, defaults.width)
+    const sourceDepthCm = normalizeFurnitureSizeCm(item.d ?? item.depth, defaults.depth)
+    const itemWidth = Math.max(GRID, snap(cmToWorld(sourceWidthCm)))
+    const itemDepth = Math.max(GRID, snap(cmToWorld(sourceDepthCm)))
+    const x = snap((e.clientX - r.left - panRef.current.x) / zoomRef.current - itemWidth / 2)
+    const y = snap((e.clientY - r.top  - panRef.current.y) / zoomRef.current - itemDepth / 2)
     const newItem = {
       ...item,
       id: `pf_${Date.now()}_${Math.random().toString(36).slice(2,7)}`, // AFTER spread to override item.id
       x, y,
-      w: item.w || item.width || 80,
-      h: item.d || item.depth || 80,
+      w: itemWidth,
+      h: itemDepth,
       angle: 0,
       color: item.color || '#8b6b4a',
       model3d: item.model3d || null,
@@ -1232,7 +1321,7 @@ export default function Canvas2D({ onDesignChange }) {
           {selItem && (
             <div className="canvas2d-toolbar__actions">
               <span className="canvas2d-toolbar__hint">
-                {selItem.name} · {Math.round(selItem.w * 5)}×{Math.round(selItem.h * 5)}cm
+                {selItem.name} · {worldToCm(selItem.w)}×{worldToCm(selItem.h)}cm
               </span>
               <label className="canvas2d-toolbar__hint" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                 Color
