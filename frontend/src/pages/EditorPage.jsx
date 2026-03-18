@@ -100,12 +100,10 @@ export default function EditorPage() {
     furnitureCount: (window.__editorPlaced   || []).length,
   })
 
-  // ── Capture a thumbnail from the 2D canvas ────────────────────────
+  // ── Capture thumbnail from 3D canvas only ─────────────────────────
   const captureThumb = () => {
     try {
-      const canvas = mode === '3d'
-        ? document.querySelector('.canvas3d-root canvas')
-        : document.querySelector('.canvas2d-canvas') || document.querySelector('.editor-canvas-area canvas')
+      const canvas = document.querySelector('.canvas3d-root canvas')
       if (canvas) return canvas.toDataURL('image/jpeg', 0.5)
     } catch {}
     return null
