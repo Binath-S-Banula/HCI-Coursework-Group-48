@@ -84,6 +84,7 @@ function getNearestWallPoint(mx, my, walls, maxDist = 30) {
 }
 
 export default function Canvas2D({ onDesignChange }) {
+  const rootRef = useRef(null)
   const canvasRef  = useRef(null)
   const fileRef    = useRef(null)
   const { activeTool, showGrid, zoom, openingDesigns } = useSelector((s) => s.editor)
@@ -932,6 +933,19 @@ export default function Canvas2D({ onDesignChange }) {
     }
   }, [deleteSelectedWall, deleteSelectedOpening])
 
+  useEffect(() => {
+    const onOutsidePointerDown = (event) => {
+      if (!rootRef.current) return
+      if (rootRef.current.contains(event.target)) return
+      setSelectedItem(null)
+      setSelectedWall(null)
+      setSelectedOpening(null)
+    }
+
+    window.addEventListener('pointerdown', onOutsidePointerDown)
+    return () => window.removeEventListener('pointerdown', onOutsidePointerDown)
+  }, [])
+
   const rotateSelected = (delta) => {
     if (!selectedItem) return
     setPlaced(prev => prev.map(p =>
@@ -1071,7 +1085,7 @@ export default function Canvas2D({ onDesignChange }) {
   const selOpening = openings.find((opening) => opening.id === selectedOpening)
 
   return (
-    <div className="canvas2d-root">
+    <div className="canvas2d-root" ref={rootRef}>
 
       {/* ── Canvas area ────────────────────────────────────────────── */}
       <div className="canvas2d-main">
