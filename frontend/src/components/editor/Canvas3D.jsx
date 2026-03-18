@@ -79,6 +79,12 @@ function normalizeTimeOfDay(value) {
   return SHADING_PRESETS[normalized] ? normalized : 'day'
 }
 
+function normalizeOpeningWidth(width, fallback = 22) {
+  const value = Number(width)
+  if (!Number.isFinite(value) || value <= 0) return fallback
+  return value > 45 ? value / 3.5 : value
+}
+
 function shadeColor(color, scalar = 1) {
   const c = new THREE.Color(color || '#8b6b4a')
   c.multiplyScalar(scalar)
@@ -195,11 +201,51 @@ function Window3D({ gmx, gmz, gLen, angle, wallColor, design = 'casement' }) {
   )
 }
 
+// ── Single Door leaf — hinged on one side ────────────────────────────────────
+function SingleDoorLeaf({ doorW, doorH, isOpen }) {
+  const groupRef = useRef()
+  const openAngle = Math.PI / 2
+  const closedAngle = 0
+  const targetRef = useRef(isOpen ? openAngle : closedAngle)
+  const currentRef = useRef(isOpen ? openAngle : closedAngle)
+
+  useEffect(() => {
+    targetRef.current = isOpen ? openAngle : closedAngle
+  }, [isOpen])
+
+  useFrame(() => {
+    if (!groupRef.current) return
+    const diff = targetRef.current - currentRef.current
+    if (Math.abs(diff) < 0.001) return
+    currentRef.current += diff * 0.12
+    groupRef.current.rotation.y = currentRef.current
+  })
+
+  return (
+    <group ref={groupRef} position={[-doorW / 2, 0, 0]}>
+      <group position={[doorW / 2, 0, 0]}>
+        <Box args={[doorW - 0.02, doorH - 0.04, 0.06]} position={[0, doorH / 2, 0]} castShadow receiveShadow>
+          <meshStandardMaterial color="#c8a878" roughness={0.6} />
+        </Box>
+        <Box args={[doorW * 0.72, doorH * 0.34, 0.022]} position={[0, doorH * 0.68, 0.041]} castShadow>
+          <meshStandardMaterial color="#b89455" roughness={0.55} />
+        </Box>
+        <Box args={[doorW * 0.72, doorH * 0.26, 0.022]} position={[0, doorH * 0.28, 0.041]} castShadow>
+          <meshStandardMaterial color="#b89455" roughness={0.55} />
+        </Box>
+        <Box args={[0.045, 0.045, 0.09]} position={[doorW * 0.38, doorH * 0.46, 0.06]} castShadow>
+          <meshStandardMaterial color="#d4a820" roughness={0.05} metalness={0.95} />
+        </Box>
+      </group>
+    </group>
+  )
+}
+
 // ── Double Door 3D — two leaves swinging inward ──────────────────────────────
 function DoubleDoorLeaf({ halfW, doorH, isOpen, side }) {
   const groupRef   = useRef()
-  // Both leaves swing inward (into the room) — left goes +90°, right goes -90°
-  const openAngle   = side === 'left' ? -Math.PI / 2 : Math.PI / 2
+  // Both leaves swing inward (into the room)
+  const openAngle   = side === 'left' ? Math.PI / 2 : -Math.PI / 2
   const closedAngle = 0
   const targetRef  = useRef(isOpen ? openAngle : closedAngle)
   const currentRef = useRef(isOpen ? openAngle : closedAngle)
@@ -296,18 +342,21 @@ function Door3D({ gmx, gmz, gLen, angle, wallColor, design = 'double' }) {
           <meshStandardMaterial color="#d4c4a8" roughness={0.4} />
         </Box>
 
-        <Box args={[gLen - 0.02, doorH - 0.04, 0.06]} position={[0, doorH/2, 0]} castShadow receiveShadow>
-          <meshStandardMaterial color="#c8a878" roughness={0.6} />
+        <SingleDoorLeaf doorW={gLen} doorH={doorH} isOpen={isOpen} />
+
+        <Box args={[gLen, 0.025, fd * 1.3]} position={[0, 0.012, 0]} receiveShadow>
+          <meshStandardMaterial color="#b0a090" roughness={0.35} metalness={0.25} />
         </Box>
-        <Box args={[gLen*0.72, doorH*0.34, 0.022]} position={[0, doorH*0.68, 0.041]} castShadow>
-          <meshStandardMaterial color="#b89455" roughness={0.55} />
-        </Box>
-        <Box args={[gLen*0.72, doorH*0.26, 0.022]} position={[0, doorH*0.28, 0.041]} castShadow>
-          <meshStandardMaterial color="#b89455" roughness={0.55} />
-        </Box>
-        <Box args={[0.045, 0.045, 0.09]} position={[gLen*0.38, doorH*0.46, 0.06]} castShadow>
-          <meshStandardMaterial color="#d4a820" roughness={0.05} metalness={0.95} />
-        </Box>
+
+        <mesh position={[0, doorH / 2, 0]} onClick={() => setIsOpen((open) => !open)}>
+          <boxGeometry args={[gLen + 0.15, doorH, 0.5]} />
+          <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+        </mesh>
+
+        <mesh position={[0, doorH + 0.22, 0]}>
+          <planeGeometry args={[0.45, 0.16]} />
+          <meshBasicMaterial color={isOpen ? '#43d9ad' : '#6c63ff'} transparent opacity={0.82} />
+        </mesh>
       </group>
     )
   }
@@ -445,7 +494,8 @@ function Wall3D({ wall, wallTexUrl, wallColor, cx, cz, openings }) {
   const segments = []
   let prevT = 0
   wallOpenings.forEach(op => {
-    const halfW = (op.width * SCALE) / 2 / totalLen
+    const openingWidth = normalizeOpeningWidth(op.width, op.type === 'door' ? 26 : 24)
+    const halfW = (openingWidth * SCALE) / 2 / totalLen
     const t1 = Math.max(prevT, op.t - halfW)
     const t2 = Math.min(1, op.t + halfW)
     if (t1 > prevT + 0.001) {

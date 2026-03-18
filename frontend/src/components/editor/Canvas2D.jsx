@@ -10,18 +10,24 @@ const ROT_OFFSET = 28 // rotate handle distance above item
 
 const OPENING_PRESETS = {
   door: {
-    single: { width: 80, label: 'Single Door' },
-    double: { width: 120, label: 'Double Door' },
-    sliding: { width: 100, label: 'Sliding Door' },
+    single: { width: 26, label: 'Single Door' },
+    double: { width: 38, label: 'Double Door' },
+    sliding: { width: 32, label: 'Sliding Door' },
   },
   window: {
-    casement: { width: 70, label: 'Casement Window' },
-    sliding: { width: 100, label: 'Sliding Window' },
-    bay: { width: 120, label: 'Bay Window' },
+    casement: { width: 24, label: 'Casement Window' },
+    sliding: { width: 32, label: 'Sliding Window' },
+    bay: { width: 38, label: 'Bay Window' },
   },
 }
 
 const getAdminAssets = () => JSON.parse(localStorage.getItem('adminAssets') || '{"furniture":[],"textures":[]}')
+
+const normalizeOpeningWidth = (width, fallback = 22) => {
+  const value = Number(width)
+  if (!Number.isFinite(value) || value <= 0) return fallback
+  return value > 45 ? value / 3.5 : value
+}
 
 // ── Hit-test helpers ─────────────────────────────────────────────────────────
 function getItemHandles(item) {
@@ -465,7 +471,8 @@ export default function Canvas2D({ onDesignChange }) {
       const len = Math.sqrt(dx*dx + dy*dy)
       const ux = dx/len, uy = dy/len   // unit along wall
       const nx = -uy, ny = ux           // unit normal to wall
-      const W2 = op.width / 2
+      const openingWidth = normalizeOpeningWidth(op.width, op.type === 'door' ? 26 : 24)
+      const W2 = openingWidth / 2
       const cx = wall.start.x + dx*op.t
       const cy = wall.start.y + dy*op.t
       const isSel = selectedOpening === op.id
@@ -533,7 +540,7 @@ export default function Canvas2D({ onDesignChange }) {
           ctx.setLineDash([3, 3])
           ctx.beginPath()
           const startAngle = Math.atan2(-ux, uy)
-          ctx.arc(cx - ux * W2, cy - uy * W2, op.width, startAngle, startAngle + Math.PI / 2)
+          ctx.arc(cx - ux * W2, cy - uy * W2, openingWidth, startAngle, startAngle + Math.PI / 2)
           ctx.stroke()
           ctx.setLineDash([])
         }
@@ -766,7 +773,7 @@ export default function Canvas2D({ onDesignChange }) {
           t: nearest.t,
           type: activeTool,
           design: preset ? selectedDesign : (activeTool === 'door' ? 'single' : 'casement'),
-          width: preset?.width || (activeTool === 'door' ? 80 : 60),
+          width: preset?.width || (activeTool === 'door' ? 26 : 60),
         }
         const newOpenings = [...openingsRef.current, newOpening]
         pushHistory(wallsRef.current, placedRef.current, newOpenings)
