@@ -205,7 +205,8 @@ export default function FurniturePanel() {
       <div style={{ padding: '7px 10px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexWrap: 'wrap', gap: 4, flexShrink: 0 }}>
         {CATS.map(c => (
           <button key={String(c.id)} onClick={() => dispatch(setCategory(c.id))} style={{
-            padding: '3px 9px', borderRadius: 5, cursor: 'pointer', fontSize: 10, fontWeight: 600,
+            minHeight: 28,
+            padding: '5px 11px', borderRadius: 7, cursor: 'pointer', fontSize: 12, fontWeight: 600,
             background: activeCategory === c.id ? 'rgba(108,99,255,0.2)' : 'transparent',
             border: `1px solid ${activeCategory === c.id ? 'rgba(108,99,255,0.45)' : 'transparent'}`,
             color: activeCategory === c.id ? '#9b95ff' : '#666',
