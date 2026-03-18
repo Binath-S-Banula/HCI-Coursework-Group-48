@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { ArrowLeft, Grid3X3, Loader2, Minus, PanelRightClose, PanelRightOpen, Plus, Save } from 'lucide-react'
@@ -30,6 +30,7 @@ export default function EditorPage() {
   const [lastSaved,     setLastSaved]     = useState(null)
   const [canvas3DSessionKey, setCanvas3DSessionKey] = useState(() => Date.now())
   const autoSaveTimer = useRef(null)
+  const changeAutoSaveTimer = useRef(null)
 
   useEffect(() => {
     setCanvas3DSessionKey(Date.now())
@@ -89,15 +90,6 @@ export default function EditorPage() {
     return () => { delete window.__setEditorZoom }
   }, [dispatch])
 
-  // ── Auto-save every 30s ───────────────────────────────────────────
-  useEffect(() => {
-    if (!projectId) return
-    autoSaveTimer.current = setInterval(() => {
-      doSave(true)
-    }, 30000)
-    return () => clearInterval(autoSaveTimer.current)
-  }, [projectId, projectName])
-
   // ── Collect current canvas state from globals ─────────────────────
   const collectState = () => ({
     walls:          window.__editorWalls     || [],
@@ -124,7 +116,7 @@ export default function EditorPage() {
   }
 
   // ── Save ──────────────────────────────────────────────────────────
-  const doSave = (silent = false) => {
+  const doSave = useCallback((silent = false) => {
     if (!projectId) return
     if (!silent) setIsSaving(true)
 
@@ -150,7 +142,37 @@ export default function EditorPage() {
           toast.error('Failed to save project')
         }
       })
-  }
+  }, [projectId, projectName, project?.thumbnail])
+
+  // ── Auto-save every 30s ───────────────────────────────────────────
+  useEffect(() => {
+    if (!projectId) return
+    autoSaveTimer.current = setInterval(() => {
+      doSave(true)
+    }, 30000)
+    return () => {
+      clearInterval(autoSaveTimer.current)
+    }
+  }, [projectId, doSave])
+
+  // ── Auto-save shortly after any canvas state change ───────────────
+  useEffect(() => {
+    if (!projectId) return
+
+    const handleEditorStateChange = () => {
+      if (window.__editorRestoreSignal) return
+      clearTimeout(changeAutoSaveTimer.current)
+      changeAutoSaveTimer.current = setTimeout(() => {
+        doSave(true)
+      }, 1500)
+    }
+
+    window.addEventListener('editor-state-change', handleEditorStateChange)
+    return () => {
+      window.removeEventListener('editor-state-change', handleEditorStateChange)
+      clearTimeout(changeAutoSaveTimer.current)
+    }
+  }, [projectId, doSave])
 
   // ── Rename ────────────────────────────────────────────────────────
   const commitRename = (newName) => {

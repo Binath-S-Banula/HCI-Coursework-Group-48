@@ -41,6 +41,134 @@
   white-space: nowrap;
 }
 
+.canvas3d-editbar {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(108,99,255,0.36);
+  background: linear-gradient(135deg, rgba(20,20,34,0.92), rgba(15,16,28,0.88));
+  backdrop-filter: blur(8px);
+  box-shadow: 0 14px 32px rgba(0,0,0,0.34);
+  z-index: 2;
+}
+
+.canvas3d-editbar__name {
+  font-size: 11px;
+  color: #f1f3ff;
+  font-weight: 700;
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 5px 9px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04);
+}
+
+.canvas3d-editbar__modes {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.canvas3d-editbar__mode-btn,
+.canvas3d-editbar__delete-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.06);
+  color: #e4e7fb;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 5px 9px;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+
+.canvas3d-editbar__color-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.06);
+  color: #e4e7fb;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 5px 8px;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+
+.canvas3d-editbar__color-wrap:hover {
+  border-color: rgba(108,99,255,0.45);
+  background: rgba(108,99,255,0.12);
+  color: #f4f5ff;
+}
+
+.canvas3d-editbar__color-input {
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 6px;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.canvas3d-editbar__color-input::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.canvas3d-editbar__color-input::-webkit-color-swatch {
+  border: 1px solid rgba(255,255,255,0.35);
+  border-radius: 6px;
+}
+
+.canvas3d-editbar__mode-btn:hover {
+  border-color: rgba(108,99,255,0.45);
+  background: rgba(108,99,255,0.12);
+  color: #f4f5ff;
+}
+
+.canvas3d-editbar__mode-btn--active {
+  border-color: rgba(108,99,255,0.68);
+  background: linear-gradient(135deg, rgba(108,99,255,0.42), rgba(108,99,255,0.2));
+  color: #ffffff;
+  box-shadow: 0 6px 14px rgba(108,99,255,0.28);
+}
+
+.canvas3d-editbar__delete-btn {
+  border-color: rgba(248,113,113,0.48);
+  color: #ffd5d9;
+  background: rgba(248,113,113,0.14);
+}
+
+.canvas3d-editbar__delete-btn:hover {
+  border-color: rgba(248,113,113,0.66);
+  background: rgba(248,113,113,0.22);
+  color: #ffe4e6;
+}
+
+.canvas3d-editbar__hint {
+  font-size: 10px;
+  color: #aab1ce;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding-left: 3px;
+}
+
 .canvas3d-lighting {
   position: absolute;
   top: 12px;

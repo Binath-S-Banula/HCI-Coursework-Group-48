@@ -1,8 +1,8 @@
-import { Suspense, useEffect, useState, useMemo, useRef } from 'react'
+import { Suspense, useEffect, useState, useMemo, useRef, useCallback } from 'react'
 import { Canvas, useLoader, useThree, useFrame } from '@react-three/fiber'
-import { OrbitControls, Environment, Grid, Box, Plane, Sky, ContactShadows, useTexture, useGLTF, Clone } from '@react-three/drei'
+import { OrbitControls, TransformControls, Environment, Grid, Box, Plane, Sky, ContactShadows, useTexture, useGLTF, Clone } from '@react-three/drei'
 import { useDispatch, useSelector } from 'react-redux'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, Move3D, RefreshCcw, Expand, Palette, Trash2 } from 'lucide-react'
 import * as THREE from 'three'
 import { setLightIntensity, setTimeOfDay } from '../../store/slices/editorSlice'
 import '../../styles/editor/Canvas3D.css'
@@ -85,6 +85,18 @@ function normalizeTimeOfDay(value) {
   return SHADING_PRESETS[normalized] ? normalized : 'day'
 }
 
+function clonePlacedState(placed = []) {
+  return placed.map((item) => ({ ...item }))
+}
+
+function arePlacedStatesEqual(a = [], b = []) {
+  if (a.length !== b.length) return false
+  for (let index = 0; index < a.length; index += 1) {
+    if (JSON.stringify(a[index]) !== JSON.stringify(b[index])) return false
+  }
+  return true
+}
+
 function normalizeOpeningWidthCm(width, fallback = 90) {
   const value = Number(width)
   if (!Number.isFinite(value) || value <= 0) return fallback
@@ -94,10 +106,40 @@ function normalizeOpeningWidthCm(width, fallback = 90) {
   return value
 }
 
+function normalizeFurnitureSizeCm(value, fallback = 80) {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed) || parsed <= 0) return fallback
+  if (parsed <= 12) return parsed * 100
+  if (parsed > 1000) return parsed / 10
+  return parsed
+}
+
+function getDefaultFurnitureSizeCm(categoryOrName = '') {
+  const key = String(categoryOrName || '').toLowerCase()
+  if (key.includes('sofa') || key.includes('couch')) return { width: 220, depth: 95 }
+  if (key.includes('chair') || key.includes('armchair') || key.includes('stool')) return { width: 60, depth: 60 }
+  if (key.includes('table') || key.includes('desk') || key.includes('coffee')) return { width: 160, depth: 90 }
+  if (key.includes('bed')) return { width: 180, depth: 200 }
+  if (key.includes('storage') || key.includes('cabinet') || key.includes('shelf') || key.includes('wardrobe')) return { width: 90, depth: 45 }
+  if (key.includes('light') || key.includes('lamp')) return { width: 45, depth: 45 }
+  if (key.includes('kitchen')) return { width: 120, depth: 60 }
+  if (key.includes('bathroom')) return { width: 80, depth: 60 }
+  if (key.includes('decor')) return { width: 60, depth: 60 }
+  return { width: 100, depth: 80 }
+}
+
 function shadeColor(color, scalar = 1) {
   const c = new THREE.Color(color || '#8b6b4a')
   c.multiplyScalar(scalar)
   return `#${c.getHexString()}`
+}
+
+function normalizeColorHex(value, fallback = '#8b6b4a') {
+  try {
+    return `#${new THREE.Color(value || fallback).getHexString()}`
+  } catch {
+    return fallback
+  }
 }
 
 // ── Compute center offset from all walls so room is centered ─────────────────
@@ -891,7 +933,7 @@ function CustomModel({ url, w, d, color }) {
   )
 }
 
-function FurnitureItem3D({ item, cx, cz }) {
+function FurnitureItem3D({ item, cx, cz, onSelect, selected, registerRef }) {
   const x   = (item.x - cx) * SCALE + (item.w * SCALE) / 2
   const z   = (item.y - cz) * SCALE + (item.h * SCALE) / 2
   const w   = Math.max((item.w || 80) * SCALE, 0.08)
@@ -921,7 +963,42 @@ function FurnitureItem3D({ item, cx, cz }) {
     </Suspense>
   ) : fallback
 
-  return <group position={[x, 0, z]} rotation={[0, -(item.angle || 0), 0]}>{model}</group>
+  return (
+    <group
+      ref={(node) => registerRef?.(item.id, node)}
+      position={[x, 0, z]}
+      rotation={[0, -(item.angle || 0), 0]}
+      onPointerDown={(e) => {
+        e.stopPropagation()
+        onSelect?.(item.id)
+      }}
+    >
+      <group>
+        {model}
+      </group>
+
+      <mesh
+        position={[0, 0.03, 0]}
+        onPointerDown={(e) => {
+          e.stopPropagation()
+          onSelect?.(item.id)
+        }}
+      >
+        <boxGeometry args={[Math.max(w + 0.12, 0.22), 0.08, Math.max(d + 0.12, 0.22)]} />
+        <meshBasicMaterial transparent opacity={0.001} depthWrite={false} />
+      </mesh>
+
+      {selected && (
+        <Box
+          args={[Math.max(w + 0.04, 0.12), 0.06, Math.max(d + 0.04, 0.12)]}
+          position={[0, 0.03, 0]}
+          raycast={() => null}
+        >
+          <meshBasicMaterial color="#6c63ff" transparent opacity={0.2} wireframe />
+        </Box>
+      )}
+    </group>
+  )
 }
 
 // ── Demo room ─────────────────────────────────────────────────────────────────
@@ -963,7 +1040,7 @@ function DemoRoom({ wallTexUrl, floorTexUrl, wallColor }) {
 }
 
 // ── Live room ─────────────────────────────────────────────────────────────────
-function LiveRoom({ walls, floor, placed, openings, wallTexUrl, floorTexUrl, wallColor, floorColor }) {
+function LiveRoom({ walls, floor, placed, openings, wallTexUrl, floorTexUrl, wallColor, floorColor, selectedFurnitureId, onSelectFurniture, registerFurnitureRef }) {
   const { cx, cz } = useMemo(() => getSceneCenter(walls, floor), [walls, floor])
 
   return (
@@ -973,7 +1050,15 @@ function LiveRoom({ walls, floor, placed, openings, wallTexUrl, floorTexUrl, wal
         <Wall3D key={wall.id} wall={wall} wallTexUrl={wallTexUrl} wallColor={wallColor} cx={cx} cz={cz} openings={openings} />
       ))}
       {placed.map(item => (
-        <FurnitureItem3D key={item.id} item={item} cx={cx} cz={cz} />
+        <FurnitureItem3D
+          key={item.id}
+          item={item}
+          cx={cx}
+          cz={cz}
+          selected={selectedFurnitureId === item.id}
+          onSelect={onSelectFurniture}
+          registerRef={registerFurnitureRef}
+        />
       ))}
     </group>
   )
@@ -988,6 +1073,16 @@ export default function Canvas3D() {
   const [liveData, setLiveData] = useState({ walls: [], floor: null, placed: [], openings: [], floorTex: null, floorColor: '#f5f2ee', wallTex: null, wallColor: '#e8e2d8' })
   const [isShadingMinimized, setIsShadingMinimized] = useState(true)
   const [canvasResetKey, setCanvasResetKey] = useState(0)
+  const [selectedFurnitureId, setSelectedFurnitureId] = useState(null)
+  const [selectedObject, setSelectedObject] = useState(null)
+  const [transformMode, setTransformMode] = useState('translate')
+  const [isTransforming, setIsTransforming] = useState(false)
+  const orbitRef = useRef(null)
+  const furnitureRefs = useRef({})
+  const sceneCenterRef = useRef({ cx: 0, cz: 0 })
+  const undoStackRef = useRef([])
+  const redoStackRef = useRef([])
+  const liveDataRef = useRef(liveData)
 
   const readEditorState = () => ({
     walls: window.__editorWalls || [],
@@ -1049,6 +1144,10 @@ export default function Canvas3D() {
   }, [])
 
   useEffect(() => {
+    liveDataRef.current = liveData
+  }, [liveData])
+
+  useEffect(() => {
     const handleReset = () => {
       setCanvasResetKey((prev) => prev + 1)
     }
@@ -1063,6 +1162,205 @@ export default function Canvas3D() {
     })
   }, [liveData.placed])
 
+  const updatePlaced = useCallback((nextPlaced, options = {}) => {
+    const { pushHistory = true } = options
+    const safeNextPlaced = clonePlacedState(nextPlaced || [])
+    const currentPlaced = clonePlacedState(liveDataRef.current.placed || [])
+
+    if (pushHistory && !arePlacedStatesEqual(currentPlaced, safeNextPlaced)) {
+      undoStackRef.current.push(currentPlaced)
+      if (undoStackRef.current.length > 100) {
+        undoStackRef.current.shift()
+      }
+      redoStackRef.current = []
+    }
+
+    setLiveData((prev) => ({ ...prev, placed: safeNextPlaced }))
+    window.__editorPlaced = safeNextPlaced
+    window.dispatchEvent(new Event('editor-state-change'))
+  }, [])
+
+  useEffect(() => {
+    sceneCenterRef.current = getSceneCenter(liveData.walls, liveData.floor)
+  }, [liveData.walls, liveData.floor])
+
+  useEffect(() => {
+    setSelectedObject(selectedFurnitureId ? (furnitureRefs.current[selectedFurnitureId] || null) : null)
+  }, [selectedFurnitureId, liveData.placed])
+
+  const undo3D = useCallback(() => {
+    if (!undoStackRef.current.length) return
+    const currentPlaced = clonePlacedState(liveDataRef.current.placed || [])
+    const previousPlaced = undoStackRef.current.pop()
+    redoStackRef.current.push(currentPlaced)
+    updatePlaced(previousPlaced, { pushHistory: false })
+    setSelectedFurnitureId((prev) => (previousPlaced.some((item) => item.id === prev) ? prev : null))
+  }, [updatePlaced])
+
+  const redo3D = useCallback(() => {
+    if (!redoStackRef.current.length) return
+    const currentPlaced = clonePlacedState(liveDataRef.current.placed || [])
+    const nextPlaced = redoStackRef.current.pop()
+    undoStackRef.current.push(currentPlaced)
+    updatePlaced(nextPlaced, { pushHistory: false })
+    setSelectedFurnitureId((prev) => (nextPlaced.some((item) => item.id === prev) ? prev : null))
+  }, [updatePlaced])
+
+  useEffect(() => {
+    window.__editorUndo = undo3D
+    window.__editorRedo = redo3D
+    window.__editorClearHistory = () => {
+      undoStackRef.current = []
+      redoStackRef.current = []
+    }
+
+    return () => {
+      if (window.__editorUndo === undo3D) delete window.__editorUndo
+      if (window.__editorRedo === redo3D) delete window.__editorRedo
+      if (window.__editorClearHistory) delete window.__editorClearHistory
+    }
+  }, [undo3D, redo3D])
+
+  useEffect(() => {
+    const onKey = (e) => {
+      const key = String(e.key || '').toLowerCase()
+
+      if (selectedFurnitureId) {
+        if (key === 'w') setTransformMode('translate')
+        if (key === 'e') setTransformMode('rotate')
+        if (key === 'r') setTransformMode('scale')
+      }
+
+      if (e.ctrlKey && key === 'z') {
+        e.preventDefault()
+        undo3D()
+        return
+      }
+
+      if (e.ctrlKey && key === 'y') {
+        e.preventDefault()
+        redo3D()
+        return
+      }
+
+      if (!selectedFurnitureId) return
+      if (e.key === 'Delete') {
+        const nextPlaced = (liveData.placed || []).filter((item) => item.id !== selectedFurnitureId)
+        updatePlaced(nextPlaced)
+        setSelectedFurnitureId(null)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [selectedFurnitureId, liveData.placed, updatePlaced, undo3D, redo3D])
+
+  const registerFurnitureRef = useCallback((id, node) => {
+    if (!id) return
+    if (node) furnitureRefs.current[id] = node
+    else delete furnitureRefs.current[id]
+    if (selectedFurnitureId === id) {
+      setSelectedObject(node || null)
+    }
+  }, [selectedFurnitureId])
+
+  const commitSelectedTransform = useCallback(() => {
+    if (!selectedFurnitureId || !selectedObject) return
+    const object = selectedObject
+    const center = sceneCenterRef.current
+    const currentItem = (liveData.placed || []).find((item) => item.id === selectedFurnitureId)
+    if (!currentItem) return
+
+    let nextW = currentItem.w
+    let nextH = currentItem.h
+    if (transformMode === 'scale') {
+      nextW = Math.max(20, Math.round((currentItem.w || 80) * Math.max(object.scale.x, 0.1)))
+      nextH = Math.max(20, Math.round((currentItem.h || 80) * Math.max(object.scale.z, 0.1)))
+      object.scale.set(1, 1, 1)
+    }
+
+    const centerX = (object.position.x / SCALE) + center.cx
+    const centerY = (object.position.z / SCALE) + center.cz
+    const nextX = Math.round(centerX - nextW / 2)
+    const nextY = Math.round(centerY - nextH / 2)
+    const nextAngle = -(object.rotation.y || 0)
+
+    if (
+      currentItem.x === nextX &&
+      currentItem.y === nextY &&
+      (currentItem.w || 0) === nextW &&
+      (currentItem.h || 0) === nextH &&
+      Math.abs((currentItem.angle || 0) - nextAngle) < 0.0005
+    ) {
+      return
+    }
+
+    const nextPlaced = (liveData.placed || []).map((item) => {
+      if (item.id !== selectedFurnitureId) return item
+      return { ...item, x: nextX, y: nextY, w: nextW, h: nextH, angle: nextAngle }
+    })
+
+    updatePlaced(nextPlaced)
+  }, [selectedFurnitureId, selectedObject, liveData.placed, transformMode, updatePlaced])
+
+  const handleDropFurniture = useCallback((e) => {
+    e.preventDefault()
+    const raw = e.dataTransfer?.getData('furniture')
+    if (!raw) return
+
+    try {
+      const item = JSON.parse(raw)
+      const defaults = getDefaultFurnitureSizeCm(item.cat || item.category || item.name)
+      const sourceWidthCm = normalizeFurnitureSizeCm(item.w ?? item.width, defaults.width)
+      const sourceDepthCm = normalizeFurnitureSizeCm(item.d ?? item.depth, defaults.depth)
+      const center = sceneCenterRef.current
+
+      const nextItem = {
+        ...item,
+        id: `pf_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
+        x: Math.round(center.cx - sourceWidthCm / 2),
+        y: Math.round(center.cz - sourceDepthCm / 2),
+        w: Math.round(sourceWidthCm),
+        h: Math.round(sourceDepthCm),
+        angle: 0,
+        color: item.color || '#8b6b4a',
+        model3d: item.model3d || null,
+      }
+
+      const nextPlaced = [...(liveData.placed || []), nextItem]
+      updatePlaced(nextPlaced)
+      setSelectedFurnitureId(nextItem.id)
+      setTransformMode('translate')
+    } catch {
+      // ignore invalid drag payload
+    }
+  }, [liveData.placed, updatePlaced])
+
+  const handleSelectFurniture = useCallback((id) => {
+    if (id !== selectedFurnitureId) {
+      setTransformMode('translate')
+    }
+    setSelectedFurnitureId(id)
+  }, [selectedFurnitureId])
+
+  const handleSelectedColorChange = useCallback((nextColor) => {
+    if (!selectedFurnitureId) return
+    const nextPlaced = (liveData.placed || []).map((item) => {
+      if (item.id !== selectedFurnitureId) return item
+      return { ...item, color: nextColor }
+    })
+    updatePlaced(nextPlaced)
+  }, [selectedFurnitureId, liveData.placed, updatePlaced])
+
+  const handleCanvasPointerMissed = useCallback(() => {
+    commitSelectedTransform()
+    setSelectedFurnitureId(null)
+  }, [commitSelectedTransform])
+
+  const selectedItem = useMemo(
+    () => (liveData.placed || []).find((item) => item.id === selectedFurnitureId) || null,
+    [liveData.placed, selectedFurnitureId]
+  )
+
   const hasDesign = liveData.walls.length > 0 || liveData.placed.length > 0 || (liveData.floor && liveData.floor.w > 0 && liveData.floor.h > 0)
   const preset = SHADING_PRESETS[normalizeTimeOfDay(timeOfDay)]
 
@@ -1070,13 +1368,14 @@ export default function Canvas3D() {
   const roomSpanMeters = Math.max(sceneWidth, sceneDepth) * SCALE
 
   return (
-    <div className="canvas3d-root">
+    <div className="canvas3d-root" onDragOver={(e) => e.preventDefault()} onDrop={handleDropFurniture}>
       <Canvas
         key={canvasResetKey}
         shadows
         camera={{ position: [2.8, 2.4, 3.8], fov: 50 }}
         style={{ background: preset.skyColor }}
         gl={{ preserveDrawingBuffer: true }}
+        onPointerMissed={handleCanvasPointerMissed}
       >
         <Suspense fallback={null}>
           <CameraController hasWalls={hasDesign} roomSpanMeters={roomSpanMeters} />
@@ -1101,6 +1400,9 @@ export default function Canvas3D() {
               floorTexUrl={liveData.floorTex?.image || null}
               wallColor={liveData.wallColor || '#e8e2d8'}
               floorColor={liveData.floorColor || '#f5f2ee'}
+              selectedFurnitureId={selectedFurnitureId}
+              onSelectFurniture={handleSelectFurniture}
+              registerFurnitureRef={registerFurnitureRef}
             />
           ) : (
             <DemoRoom
@@ -1113,11 +1415,28 @@ export default function Canvas3D() {
           <ContactShadows position={[0, -0.01, 0]} opacity={0.35} scale={20} blur={1.5} far={10} />
 
           <OrbitControls
+            ref={orbitRef}
+            enabled={!isTransforming}
             enableDamping dampingFactor={0.05}
             minDistance={3} maxDistance={30}
             maxPolarAngle={Math.PI / 2.05}
             target={[0, 1, 0]}
           />
+
+          {selectedObject && (
+            <TransformControls
+              object={selectedObject}
+              mode={transformMode}
+              showX
+              showY={false}
+              showZ
+              onMouseDown={() => setIsTransforming(true)}
+              onMouseUp={() => {
+                setIsTransforming(false)
+                commitSelectedTransform()
+              }}
+            />
+          )}
 
           <Grid
             args={[40, 40]} position={[0, -0.01, 0]}
@@ -1132,7 +1451,52 @@ export default function Canvas3D() {
         <span>🖱 Drag to orbit</span>
         <span>🖱 Right-drag to pan</span>
         <span>🖲 Scroll to zoom</span>
+        <span>📦 Drag furniture here to add</span>
       </div>
+
+      {selectedItem && (
+        <div className="canvas3d-editbar">
+          <span className="canvas3d-editbar__name">{selectedItem.name}</span>
+          <div className="canvas3d-editbar__modes">
+            {[['translate', 'Move'], ['rotate', 'Rotate'], ['scale', 'Resize']].map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setTransformMode(id)}
+                className={`canvas3d-editbar__mode-btn ${transformMode === id ? 'canvas3d-editbar__mode-btn--active' : ''}`}
+              >
+                {id === 'translate' && <Move3D size={13} strokeWidth={2.2} />}
+                {id === 'rotate' && <RefreshCcw size={13} strokeWidth={2.2} />}
+                {id === 'scale' && <Expand size={13} strokeWidth={2.2} />}
+                {label}
+              </button>
+            ))}
+            <label className="canvas3d-editbar__color-wrap" title="Color">
+              <Palette size={13} strokeWidth={2.2} />
+              <input
+                type="color"
+                className="canvas3d-editbar__color-input"
+                value={normalizeColorHex(selectedItem.color, '#8b6b4a')}
+                onChange={(e) => handleSelectedColorChange(e.target.value)}
+                aria-label="Change furniture color"
+              />
+            </label>
+            <button
+              type="button"
+              className="canvas3d-editbar__delete-btn"
+              onClick={() => {
+                const nextPlaced = (liveData.placed || []).filter((item) => item.id !== selectedItem.id)
+                updatePlaced(nextPlaced)
+                setSelectedFurnitureId(null)
+              }}
+            >
+              <Trash2 size={13} strokeWidth={2.2} />
+              Delete
+            </button>
+          </div>
+          <span className="canvas3d-editbar__hint">W Move · E Rotate · R Resize</span>
+        </div>
+      )}
 
       <div className={`canvas3d-lighting ${isShadingMinimized ? 'canvas3d-lighting--collapsed' : ''}`}>
         <div className="canvas3d-lighting__header">
