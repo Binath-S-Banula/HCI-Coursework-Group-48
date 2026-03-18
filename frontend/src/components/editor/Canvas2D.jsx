@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, useCallback } from 'react'
+import { useRef, useEffect, useLayoutEffect, useState, useCallback } from 'react'
 import { ChevronDown } from 'lucide-react'
 import '../../styles/editor/Canvas2D.css'
 import { useSelector } from 'react-redux'
@@ -116,6 +116,7 @@ export default function Canvas2D({ onDesignChange }) {
   const [wallColor,    setWallColor]    = useState(() => window.__editorWallColor || '#e8e2d8')
   const [texPanel,     setTexPanel]     = useState(false)
   const [loadedImages, setLoadedImages] = useState({})
+  const [canvasViewport, setCanvasViewport] = useState({ width: 0, height: 0 })
 
   // Interaction state refs (avoid stale closures in event listeners)
   const dragState  = useRef(null)  // { type: 'move'|'resize-tl'|…|'rotate', startMx, startMy, origItem }
@@ -131,12 +132,46 @@ export default function Canvas2D({ onDesignChange }) {
   useEffect(() => { panRef.current = pan }, [pan])
   const zoomRef = useRef(zoom)
   useEffect(() => { zoomRef.current = zoom }, [zoom])
+  const queuedPointerRef = useRef(null)
+  const moveRafRef = useRef(null)
 
   // ── Admin assets reload ──────────────────────────────────────────────
   useEffect(() => {
     const onFocus = () => setAssets(getAdminAssets())
     window.addEventListener('focus', onFocus)
     return () => window.removeEventListener('focus', onFocus)
+  }, [])
+
+  useLayoutEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    let rafId = null
+    const syncViewport = () => {
+      const width = Math.max(1, Math.round(canvas.clientWidth || canvas.offsetWidth || 900))
+      const height = Math.max(1, Math.round(canvas.clientHeight || canvas.offsetHeight || 550))
+      setCanvasViewport((prev) => {
+        if (prev.width === width && prev.height === height) return prev
+        return { width, height }
+      })
+    }
+
+    const scheduleSync = () => {
+      if (rafId) cancelAnimationFrame(rafId)
+      rafId = requestAnimationFrame(syncViewport)
+    }
+
+    syncViewport()
+    const resizeObserver = new ResizeObserver(scheduleSync)
+    resizeObserver.observe(canvas)
+    if (canvas.parentElement) resizeObserver.observe(canvas.parentElement)
+    window.addEventListener('resize', scheduleSync)
+
+    return () => {
+      if (rafId) cancelAnimationFrame(rafId)
+      resizeObserver.disconnect()
+      window.removeEventListener('resize', scheduleSync)
+    }
   }, [])
 
   useEffect(() => {
@@ -167,6 +202,7 @@ export default function Canvas2D({ onDesignChange }) {
     window.__editorFloorColor = floorColor
     window.__editorWallTex  = wallTex
     window.__editorWallColor = wallColor
+    window.dispatchEvent(new Event('editor-state-change'))
     if (onDesignChange) onDesignChange({ walls, placed, openings, floorTex, floorRect, floorColor, wallTex, wallColor })
   }, [walls, placed, openings, floorTex, floorRect, floorColor, wallTex, wallColor])
 
@@ -288,12 +324,14 @@ export default function Canvas2D({ onDesignChange }) {
   }, [undo, redo, selectedItem, pushHistory, deleteSelectedWall, deleteSelectedOpening])
 
   // ── Draw ─────────────────────────────────────────────────────────────
-  useEffect(() => {
+  useLayoutEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
-    canvas.width  = canvas.offsetWidth  || 900
-    canvas.height = canvas.offsetHeight || 550
+    const nextWidth = canvasViewport.width || canvas.offsetWidth || 900
+    const nextHeight = canvasViewport.height || canvas.offsetHeight || 550
+    if (canvas.width !== nextWidth) canvas.width = nextWidth
+    if (canvas.height !== nextHeight) canvas.height = nextHeight
     const W = canvas.width, H = canvas.height
 
     ctx.save()
@@ -649,7 +687,7 @@ export default function Canvas2D({ onDesignChange }) {
     }
 
     ctx.restore()
-  }, [walls, drawStart, mousePos, showGrid, bgImage, bgOpacity, placed, openings, selectedWall, selectedItem, selectedOpening, activeTool, floorTex, floorRect, floorColor, wallTex, wallColor, loadedImages, zoom, pan])
+  }, [walls, drawStart, mousePos, showGrid, bgImage, bgOpacity, placed, openings, selectedWall, selectedItem, selectedOpening, activeTool, floorTex, floorRect, floorColor, wallTex, wallColor, loadedImages, zoom, pan, canvasViewport])
 
   // ── Coordinate helpers ───────────────────────────────────────────────
   const screenToWorld = useCallback((clientX, clientY) => {
@@ -789,14 +827,21 @@ export default function Canvas2D({ onDesignChange }) {
     const rawX = e.clientX - r.left, rawY = e.clientY - r.top
 
     // Update crosshair/preview position
-    setMousePos({
-      x: (rawX - panRef.current.x) / zoomRef.current,
-      y: (rawY - panRef.current.y) / zoomRef.current,
+    setMousePos(prev => {
+      const nextX = (rawX - panRef.current.x) / zoomRef.current
+      const nextY = (rawY - panRef.current.y) / zoomRef.current
+      if (Math.abs(prev.x - nextX) < 0.25 && Math.abs(prev.y - nextY) < 0.25) return prev
+      return { x: nextX, y: nextY }
     })
 
     // Pan
     if (isPanning.current) {
-      setPan({ x: e.clientX - panStart.current.x, y: e.clientY - panStart.current.y })
+      setPan(prev => {
+        const nextX = e.clientX - panStart.current.x
+        const nextY = e.clientY - panStart.current.y
+        if (prev.x === nextX && prev.y === nextY) return prev
+        return { x: nextX, y: nextY }
+      })
       return
     }
 
@@ -809,22 +854,43 @@ export default function Canvas2D({ onDesignChange }) {
     const dx = mx - ds.startMx, dy = my - ds.startMy
 
     if (ds.type === 'move') {
-      setPlaced(prev => prev.map(p => p.id === origItem.id
-        ? { ...p, x: snap(origItem.x + dx), y: snap(origItem.y + dy) }
-        : p
-      ))
+      const nextX = snap(origItem.x + dx)
+      const nextY = snap(origItem.y + dy)
+      if (nextX === origItem.x && nextY === origItem.y) return
+      setPlaced(prev => {
+        let changed = false
+        const next = prev.map(p => {
+          if (p.id !== origItem.id) return p
+          if (p.x === nextX && p.y === nextY) return p
+          changed = true
+          return { ...p, x: nextX, y: nextY }
+        })
+        if (changed) {
+          placedRef.current = next
+          window.__editorPlaced = next
+          window.dispatchEvent(new Event('editor-state-change'))
+        }
+        return changed ? next : prev
+      })
 
     } else if (ds.type === 'move-opening') {
       const nearest = getNearestWallPoint(mx, my, wallsRef.current, 50)
       if (!nearest?.wall) return
       setOpenings(prev => {
+        let changed = false
         const next = prev.map(o =>
           o.id === ds.origOpening.id
-            ? { ...o, wallId: nearest.wall.id, t: nearest.t }
+            ? (() => {
+                if (o.wallId === nearest.wall.id && o.t === nearest.t) return o
+                changed = true
+                return { ...o, wallId: nearest.wall.id, t: nearest.t }
+              })()
             : o
         )
+        if (!changed) return prev
         openingsRef.current = next
         window.__editorOpenings = next
+        window.dispatchEvent(new Event('editor-state-change'))
         return next
       })
 
@@ -832,7 +898,21 @@ export default function Canvas2D({ onDesignChange }) {
       const cx = origItem.x + origItem.w / 2
       const cy = origItem.y + origItem.h / 2
       const angle = Math.atan2(my - cy, mx - cx) + Math.PI / 2
-      setPlaced(prev => prev.map(p => p.id === origItem.id ? { ...p, angle } : p))
+      setPlaced(prev => {
+        let changed = false
+        const next = prev.map(p => {
+          if (p.id !== origItem.id) return p
+          if ((p.angle || 0) === angle) return p
+          changed = true
+          return { ...p, angle }
+        })
+        if (changed) {
+          placedRef.current = next
+          window.__editorPlaced = next
+          window.dispatchEvent(new Event('editor-state-change'))
+        }
+        return changed ? next : prev
+      })
 
     } else if (ds.type.startsWith('resize-')) {
       const corner = ds.type.replace('resize-', '')
@@ -852,7 +932,21 @@ export default function Canvas2D({ onDesignChange }) {
         nx = snap(x + (w - Math.max(GRID, snap(w - ldx)))); nw = Math.max(GRID, snap(w - ldx))
         ny = snap(y + (h - Math.max(GRID, snap(h - ldy)))); nh = Math.max(GRID, snap(h - ldy))
       }
-      setPlaced(prev => prev.map(p => p.id === origItem.id ? { ...p, x: nx, y: ny, w: nw, h: nh } : p))
+      setPlaced(prev => {
+        let changed = false
+        const next = prev.map(p => {
+          if (p.id !== origItem.id) return p
+          if (p.x === nx && p.y === ny && p.w === nw && p.h === nh) return p
+          changed = true
+          return { ...p, x: nx, y: ny, w: nw, h: nh }
+        })
+        if (changed) {
+          placedRef.current = next
+          window.__editorPlaced = next
+          window.dispatchEvent(new Event('editor-state-change'))
+        }
+        return changed ? next : prev
+      })
     }
 
     // Update cursor
@@ -861,6 +955,15 @@ export default function Canvas2D({ onDesignChange }) {
     else if (ds.type === 'rotate') canvas.style.cursor = 'crosshair'
     else canvas.style.cursor = 'nwse-resize'
   }, [screenToWorld])
+
+  useEffect(() => {
+    return () => {
+      if (moveRafRef.current) {
+        cancelAnimationFrame(moveRafRef.current)
+        moveRafRef.current = null
+      }
+    }
+  }, [])
 
   // ── Mouse up — end drag ───────────────────────────────────────────────
   const handleMouseUp = useCallback((e) => {
@@ -1039,8 +1142,19 @@ export default function Canvas2D({ onDesignChange }) {
 
   // Merge mouse move handlers
   const onMouseMove = useCallback((e) => {
-    handleMouseMove(e)
-    handleMouseMoveForCursor(e)
+    queuedPointerRef.current = {
+      clientX: e.clientX,
+      clientY: e.clientY,
+      button: e.button,
+    }
+    if (moveRafRef.current) return
+    moveRafRef.current = requestAnimationFrame(() => {
+      moveRafRef.current = null
+      const queued = queuedPointerRef.current
+      if (!queued) return
+      handleMouseMove(queued)
+      handleMouseMoveForCursor(queued)
+    })
   }, [handleMouseMove, handleMouseMoveForCursor])
 
   // ── Drop furniture ───────────────────────────────────────────────────

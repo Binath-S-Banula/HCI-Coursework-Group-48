@@ -951,6 +951,17 @@ export default function Canvas3D() {
   const [liveData, setLiveData] = useState({ walls: [], floor: null, placed: [], openings: [], floorTex: null, floorColor: '#f5f2ee', wallTex: null, wallColor: '#e8e2d8' })
   const [isShadingMinimized, setIsShadingMinimized] = useState(true)
 
+  const readEditorState = () => ({
+    walls: window.__editorWalls || [],
+    floor: window.__editorFloor || null,
+    placed: window.__editorPlaced || [],
+    openings: window.__editorOpenings || [],
+    floorTex: window.__editorFloorTex || null,
+    floorColor: window.__editorFloorColor || '#f5f2ee',
+    wallTex: window.__editorWallTex || null,
+    wallColor: window.__editorWallColor || '#e8e2d8',
+  })
+
   useEffect(() => {
     if (mode === '3d') {
       setIsShadingMinimized(true)
@@ -977,36 +988,26 @@ export default function Canvas3D() {
   }, [timeOfDay])
 
   useEffect(() => {
-    const id = setInterval(() => {
-      const w = window.__editorWalls
-      if (w !== undefined) {
-        setLiveData(prev => {
-          const placed    = window.__editorPlaced    || []
-          const walls     = window.__editorWalls     || []
-          const floor     = window.__editorFloor     || null
-          const openings  = window.__editorOpenings  || []
-          const floorTex  = window.__editorFloorTex  || null
-          const floorColor = window.__editorFloorColor || '#f5f2ee'
-          const wallTex   = window.__editorWallTex   || null
-          const wallColor = window.__editorWallColor || '#e8e2d8'
-          // Always update to catch resize/move changes in placed items
-          const placedSig = placed.map(p => `${p.id}:${p.x},${p.y},${p.w},${p.h},${p.angle||0},${p.color||''}`).join('|')
-          const prevSig   = prev.placed.map(p => `${p.id}:${p.x},${p.y},${p.w},${p.h},${p.angle||0},${p.color||''}`).join('|')
-          if (
-            placedSig === prevSig &&
-            walls.length === prev.walls.length &&
-            floor === prev.floor &&
-            openings.length === prev.openings.length &&
-            floorTex === prev.floorTex &&
-            floorColor === prev.floorColor &&
-            wallTex === prev.wallTex &&
-            wallColor === prev.wallColor
-          ) return prev
-          return { walls, floor, placed, openings, floorTex, floorColor, wallTex, wallColor }
-        })
-      }
-    }, 100)
-    return () => clearInterval(id)
+    const applyState = () => {
+      setLiveData(prev => {
+        const next = readEditorState()
+        if (
+          prev.walls === next.walls &&
+          prev.floor === next.floor &&
+          prev.placed === next.placed &&
+          prev.openings === next.openings &&
+          prev.floorTex === next.floorTex &&
+          prev.floorColor === next.floorColor &&
+          prev.wallTex === next.wallTex &&
+          prev.wallColor === next.wallColor
+        ) return prev
+        return next
+      })
+    }
+
+    applyState()
+    window.addEventListener('editor-state-change', applyState)
+    return () => window.removeEventListener('editor-state-change', applyState)
   }, [])
 
   const hasDesign = liveData.walls.length > 0 || liveData.placed.length > 0 || (liveData.floor && liveData.floor.w > 0 && liveData.floor.h > 0)
@@ -1027,7 +1028,7 @@ export default function Canvas3D() {
           <CameraController hasWalls={hasDesign} cx={rcx} cz={rcz} />
           <ambientLight intensity={preset.ambient * lightIntensity} />
           <directionalLight position={[10, 12, 8]} intensity={preset.directional * lightIntensity} castShadow
-            shadow-mapSize={[2048, 2048]}
+            shadow-mapSize={[1024, 1024]}
             shadow-camera-left={-15} shadow-camera-right={15}
             shadow-camera-top={15}  shadow-camera-bottom={-15}
           />

@@ -217,16 +217,15 @@ export default function EditorPage() {
         <div className="editor-workspace">
           <div className="editor-canvas-area">
 
-          {/* 2D — only render after project is loaded */}
-          {project && (
-            <div style={{ position:'absolute', inset:0, display: mode==='2d' ? 'flex' : 'none', flexDirection:'column' }}>
+          {/* Render only the active canvas to avoid hidden heavy renders */}
+          {project && mode === '2d' && (
+            <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column' }}>
               <Canvas2D onPropertiesOpen={() => setPropsOpen(true)} />
             </div>
           )}
 
-          {/* 3D — only render after project is loaded */}
-          {project && (
-            <div style={{ position:'absolute', inset:0, display: mode==='3d' ? 'block' : 'none' }}>
+          {project && mode === '3d' && (
+            <div style={{ position:'absolute', inset:0, display:'block' }}>
               <Canvas3D />
             </div>
           )}
