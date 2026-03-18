@@ -5,6 +5,7 @@ import { furnitureService } from '../../services/furniture.service'
 import { Armchair } from 'lucide-react'
 
 const CATS = [
+  { id: 'all',      label: 'All'     },
   { id: 'sofa',     label: 'Sofa'    },
   { id: 'chair',    label: 'Chair'   },
   { id: 'table',    label: 'Table'   },
@@ -177,9 +178,10 @@ export default function FurniturePanel() {
   }, [])
 
   const allItems = [...items, ...ITEMS]
-  const filtered  = allItems.filter(f =>
-    (activeCategory ? f.cat === activeCategory : f.cat === 'sofa')
-  )
+  const filtered = allItems.filter((f) => {
+    if (!activeCategory || activeCategory === 'all') return true
+    return f.cat === activeCategory
+  })
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, width, background: '#13131f', position: 'relative', flexShrink: 0 }}>
