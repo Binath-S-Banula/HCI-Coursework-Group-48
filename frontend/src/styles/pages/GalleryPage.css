@@ -105,6 +105,9 @@
 .gallery-search-icon {
   position: absolute; left: 14px;
   top: 50%; transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   color: #555; font-size: 15px;
   pointer-events: none;
 }
@@ -241,7 +244,12 @@
   align-items: center; justify-content: center; gap: 12px;
 }
 .gallery-card__placeholder-emoji {
-  font-size: 52px;
+  width: 52px;
+  height: 52px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255,255,255,0.88);
   filter: drop-shadow(0 4px 12px rgba(0,0,0,0.4));
   transition: transform 0.3s;
 }
@@ -269,6 +277,7 @@
   padding: 10px 22px; border-radius: 10px;
   background: linear-gradient(135deg, #6c63ff, #43d9ad);
   color: #fff; border: none; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 8px;
   font-weight: 700; font-size: 13px;
   box-shadow: 0 4px 16px rgba(108,99,255,0.4);
   transition: transform 0.15s;
@@ -307,7 +316,15 @@
   display: flex; flex-direction: column;
   align-items: center; gap: 2px; flex-shrink: 0;
 }
-.gallery-card__like-icon { font-size: 16px; }
+.gallery-card__like-icon {
+  display: inline-flex;
+  font-size: 16px;
+}
+.gallery-card__like-icon--active {
+  color: #ff6b6b;
+}
+.gallery-card__like-icon--inactive { color: #666; }
+.gallery-card__like-btn:hover .gallery-card__like-icon--inactive { color: #999; }
 .gallery-card__like-count { font-size: 10px; font-weight: 600; }
 .gallery-card__like-count--active { color: #ff6b6b; }
 .gallery-card__like-count--inactive { color: #444; }
@@ -322,6 +339,7 @@
   background: rgba(108,99,255,0.12);
   border: 1px solid rgba(108,99,255,0.25);
   color: #9b95ff; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px;
   font-size: 11px; font-weight: 700;
   transition: background 0.15s;
 }
@@ -332,6 +350,12 @@
   text-align: center; padding: 80px 20px; color: #444;
 }
 .gallery-empty__icon { font-size: 56px; margin-bottom: 16px; }
+.gallery-empty__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #555;
+}
 .gallery-empty__title {
   color: #666; font-family: 'Syne', sans-serif;
   font-size: 20px; font-weight: 800; margin-bottom: 8px;
