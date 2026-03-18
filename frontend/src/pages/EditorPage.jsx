@@ -214,7 +214,8 @@ export default function EditorPage() {
       <div className="editor-body">
         <EditorToolbar />
 
-        <div className="editor-canvas-area">
+        <div className="editor-workspace">
+          <div className="editor-canvas-area">
 
           {/* 2D — only render after project is loaded */}
           {project && (
@@ -245,6 +246,8 @@ export default function EditorPage() {
               <button className="editor-topbar-btn" onClick={() => dispatch(toggleGrid())}><Grid3X3 size={14} /> Grid</button>
             </div>
           )}
+
+          </div>
 
           <div className={`editor-furniture-dock ${furnitureOpen ? 'editor-furniture-dock--open' : 'editor-furniture-dock--closed'}`}>
             {furnitureOpen ? (

@@ -169,14 +169,13 @@
   padding: 12px 14px;
   background: linear-gradient(180deg, #121224 0%, #0f0f1a 100%);
   border-bottom: 1px solid rgba(255,255,255,0.05);
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 12px;
-  flex-wrap: wrap;
 }
 
 .canvas2d-tex-panel__section {
-  min-width: 260px;
-  flex: 1;
+  min-width: 0;
   background: rgba(255,255,255,0.02);
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: 10px;
