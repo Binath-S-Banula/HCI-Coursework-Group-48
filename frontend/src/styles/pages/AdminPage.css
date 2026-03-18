@@ -13,15 +13,17 @@
   position: fixed; height: 100vh; z-index: 10;
 }
 .admin-sidebar__logo {
-  padding: 1.5rem 1.25rem;
+  padding: 0.35rem 0.75rem;
   border-bottom: 1px solid rgba(255,255,255,0.05);
-  display: flex; align-items: center; gap: 0.75rem;
-}
-.admin-sidebar__logo-icon {
-  width: 2.25rem; height: 2.25rem; border-radius: 0.625rem;
-  background: linear-gradient(135deg, #ff6b6b, #ee5a24);
   display: flex; align-items: center; justify-content: center;
-  font-size: 1.125rem; flex-shrink: 0;
+}
+.admin-sidebar__logo-image {
+  height: 3.6rem;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  display: block;
+  flex-shrink: 0;
 }
 .admin-sidebar__logo-text { line-height: 1.25; }
 .admin-sidebar__logo-name { font-family: 'Syne', sans-serif; font-weight: 900; font-size: 0.9375rem; }
