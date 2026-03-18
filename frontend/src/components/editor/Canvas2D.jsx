@@ -987,22 +987,6 @@ export default function Canvas2D({ onDesignChange }) {
                 </div>
               </div>
             </div>
-
-            {/* Floor Textures */}
-            <div>
-              <div className="canvas2d-tex-section__label"> FLOOR TEXTURES</div>
-              <div className="canvas2d-tex-section__swatches">
-                <button onClick={() => setFloorTex(null)}
-                  className={`canvas2d-tex-swatch--none ${!floorTex ? 'canvas2d-tex-swatch--none-floor-active' : 'canvas2d-tex-swatch--none-inactive'}`}>∅</button>
-                {floorTextures.map(t => (
-                  <div key={t.id} onClick={() => setFloorTex(t)}
-                    className={`canvas2d-tex-img ${floorTex?.id === t.id ? 'canvas2d-tex-img--floor-active' : 'canvas2d-tex-img--floor-inactive'}`}>
-                    <img src={t.image} alt={t.name} />
-                  </div>
-                ))}
-                {floorTextures.length === 0 && <span className="canvas2d-tex-empty">None — go to Admin</span>}
-              </div>
-            </div>
           </div>
         )}
 
