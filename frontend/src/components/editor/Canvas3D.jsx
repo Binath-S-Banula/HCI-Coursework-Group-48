@@ -917,7 +917,10 @@ export default function Canvas3D() {
       </div>
 
       <div className="canvas3d-lighting">
-        <label htmlFor="canvas3d-light-intensity" className="canvas3d-lighting__label">Shading</label>
+        <div className="canvas3d-lighting__header">
+          <label htmlFor="canvas3d-light-intensity" className="canvas3d-lighting__label">Shading</label>
+          <span className="canvas3d-lighting__chip">{normalizeTimeOfDay(timeOfDay)}</span>
+        </div>
         <div className="canvas3d-lighting__presets">
           {[
             { id: 'morning', label: 'Morning' },
@@ -935,17 +938,20 @@ export default function Canvas3D() {
             </button>
           ))}
         </div>
-        <input
-          id="canvas3d-light-intensity"
-          type="range"
-          min={MIN_LIGHT_INTENSITY}
-          max={MAX_LIGHT_INTENSITY}
-          step={0.05}
-          value={lightIntensity}
-          onChange={(e) => dispatch(setLightIntensity(Number(e.target.value)))}
-          className="canvas3d-lighting__slider"
-        />
-        <span className="canvas3d-lighting__value">{Math.round(lightIntensity * 100)}%</span>
+        <div className="canvas3d-lighting__intensity-row">
+          <span className="canvas3d-lighting__intensity-label">Intensity</span>
+          <input
+            id="canvas3d-light-intensity"
+            type="range"
+            min={MIN_LIGHT_INTENSITY}
+            max={MAX_LIGHT_INTENSITY}
+            step={0.05}
+            value={lightIntensity}
+            onChange={(e) => dispatch(setLightIntensity(Number(e.target.value)))}
+            className="canvas3d-lighting__slider"
+          />
+          <span className="canvas3d-lighting__value">{Math.round(lightIntensity * 100)}%</span>
+        </div>
       </div>
 
       {/* Status */}
