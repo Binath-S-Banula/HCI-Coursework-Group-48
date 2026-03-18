@@ -98,7 +98,6 @@ export default function EditorPage() {
     timeOfDay:      ['morning', 'day', 'evening', 'night'].includes(window.__editorTimeOfDay) ? window.__editorTimeOfDay : 'day',
     wallCount:      (window.__editorWalls    || []).length,
     furnitureCount: (window.__editorPlaced   || []).length,
-    thumbnail:      captureThumb(),
   })
 
   // ── Capture a thumbnail from the 2D canvas ────────────────────────
@@ -118,7 +117,12 @@ export default function EditorPage() {
     if (!silent) setIsSaving(true)
 
     const state = collectState()
-    const patch = { name: projectName, ...state }
+    const capturedThumbnail = captureThumb()
+    const patch = {
+      name: projectName,
+      ...state,
+      ...(capturedThumbnail ? { thumbnail: capturedThumbnail } : (project?.thumbnail ? { thumbnail: project.thumbnail } : {})),
+    }
     projectService.update(projectId, patch)
       .then((saved) => {
         setProject(saved)
