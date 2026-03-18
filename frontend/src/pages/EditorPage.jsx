@@ -37,8 +37,9 @@ export default function EditorPage() {
   }, [projectId])
 
   useEffect(() => {
-    if (searchParams.get('view') === '3d') {
-      dispatch(setMode('3d'))
+    const view = searchParams.get('view')
+    if (view === '3d' || view === '2d') {
+      dispatch(setMode(view))
     }
   }, [dispatch, searchParams])
 

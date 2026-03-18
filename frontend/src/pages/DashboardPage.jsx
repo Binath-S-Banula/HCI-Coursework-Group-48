@@ -6,6 +6,34 @@ import { Edit3, Globe, Home, Pencil, Plus, Sparkles, Trash2, Waves } from 'lucid
 import { projectService } from '../services/project.service'
 import '../styles/pages/DashboardPage.css'
 
+const GRID = 10
+const DEFAULT_CANVAS_WIDTH = 900
+const DEFAULT_CANVAS_HEIGHT = 550
+
+const snap = (value) => Math.round(Number(value || 0) / GRID) * GRID
+
+const defaultSizeByCategory = (category = '') => {
+  const key = String(category || '').toLowerCase()
+  if (key.includes('sofa') || key.includes('couch')) return { width: 220, depth: 95 }
+  if (key.includes('chair') || key.includes('armchair') || key.includes('stool')) return { width: 60, depth: 60 }
+  if (key.includes('table') || key.includes('desk') || key.includes('coffee')) return { width: 160, depth: 90 }
+  if (key.includes('bed')) return { width: 180, depth: 200 }
+  if (key.includes('storage') || key.includes('cabinet') || key.includes('shelf') || key.includes('wardrobe')) return { width: 90, depth: 45 }
+  if (key.includes('light') || key.includes('lamp')) return { width: 45, depth: 45 }
+  if (key.includes('kitchen')) return { width: 120, depth: 60 }
+  if (key.includes('bathroom')) return { width: 80, depth: 60 }
+  if (key.includes('decor')) return { width: 60, depth: 60 }
+  return { width: 100, depth: 80 }
+}
+
+const normalizeSizeCm = (value, fallback) => {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed) || parsed <= 0) return fallback
+  if (parsed <= 12) return parsed * 100
+  if (parsed > 1000) return parsed / 10
+  return parsed
+}
+
 // ── Sub-components ────────────────────────────────────────────────────
 function ProjectCard({ project, onEdit, onDelete, onRename, onTogglePublic }) {
   const [renaming, setRenaming] = useState(false)
@@ -91,6 +119,63 @@ export default function DashboardPage() {
   const [loading,  setLoading]  = useState(true)
   const [deleting, setDeleting] = useState(null)
 
+  const readPendingFurniture = () => {
+    try {
+      const raw = localStorage.getItem('homeplan3d_pendingFurniture')
+      if (!raw) return null
+      const parsed = JSON.parse(raw)
+      return parsed && parsed.name ? parsed : null
+    } catch {
+      return null
+    }
+  }
+
+  const clearPendingFurniture = () => {
+    localStorage.removeItem('homeplan3d_pendingFurniture')
+  }
+
+  const buildPlacedItem = (pendingItem) => {
+    const defaults = defaultSizeByCategory(pendingItem.category || pendingItem.name)
+    const width = Math.max(GRID, snap(normalizeSizeCm(pendingItem.width, defaults.width)))
+    const depth = Math.max(GRID, snap(normalizeSizeCm(pendingItem.depth, defaults.depth)))
+    const x = snap((DEFAULT_CANVAS_WIDTH / 2) - (width / 2))
+    const y = snap((DEFAULT_CANVAS_HEIGHT / 2) - (depth / 2))
+
+    return {
+      id: `pf_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
+      name: pendingItem.name,
+      category: pendingItem.category,
+      image: pendingItem.image || null,
+      model3d: pendingItem.model3d || null,
+      w: width,
+      h: depth,
+      x,
+      y,
+      angle: 0,
+      color: pendingItem.color || '#8b6b4a',
+    }
+  }
+
+  const openProjectWithPendingItem = async (project) => {
+    const pending = readPendingFurniture()
+    if (!pending) {
+      navigate(`/editor/${project._id}`)
+      return
+    }
+
+    try {
+      const placedItem = buildPlacedItem(pending)
+      await projectService.update(project._id, {
+        placed: [...(project.placed || []), placedItem],
+      })
+      clearPendingFurniture()
+      navigate(`/editor/${project._id}?view=2d`)
+    } catch {
+      toast.error('Failed to add furniture to project')
+      navigate(`/editor/${project._id}`)
+    }
+  }
+
   const loadProjects = async () => {
     setLoading(true)
     try {
@@ -117,7 +202,23 @@ export default function DashboardPage() {
 
   const handleCreate = async () => {
     try {
-      const newProject = await projectService.create({ name: 'New Project' })
+      const pending = readPendingFurniture()
+      const baseName = pending?.name ? `${pending.name} Project` : 'New Project'
+      const newProject = await projectService.create({ name: baseName })
+
+      if (pending) {
+        const placedItem = buildPlacedItem(pending)
+        const updatedProject = await projectService.update(newProject._id, {
+          walls: [],
+          openings: [],
+          placed: [placedItem],
+        })
+        setProjects((prev) => [updatedProject, ...prev])
+        clearPendingFurniture()
+        navigate(`/editor/${updatedProject._id}?view=2d`)
+        return
+      }
+
       setProjects((prev) => [newProject, ...prev])
       navigate(`/editor/${newProject._id}`)
     } catch {
@@ -149,8 +250,8 @@ export default function DashboardPage() {
     }
   }
 
-  const handleEdit = (project) => {
-    navigate(`/editor/${project._id}`)
+  const handleEdit = async (project) => {
+    await openProjectWithPendingItem(project)
   }
 
   const handleTogglePublic = async (project) => {

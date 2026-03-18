@@ -223,8 +223,16 @@ export default function FurnitureCatalogPage() {
   }
 
   const handleUseInEditor = (item) => {
-    localStorage.setItem('homeplan3d_quickAdd', JSON.stringify(item))
-    navigate('/editor')
+    localStorage.setItem('homeplan3d_pendingFurniture', JSON.stringify({
+      name: item.name,
+      category: item.category || item.cat,
+      width: item.width ?? item.w,
+      depth: item.depth ?? item.d,
+      image: item.image || item.imageUrl || null,
+      model3d: item.model3d || null,
+      color: item.color || '#8b6b4a',
+    }))
+    navigate('/dashboard')
   }
 
   const gradient = (cat) => ITEM_GRADIENTS[cat] || 'linear-gradient(135deg,#1a1a2e,#2d2a6e)'
