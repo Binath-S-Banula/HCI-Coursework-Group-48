@@ -941,7 +941,7 @@ export default function Canvas2D({ onDesignChange }) {
           {!selItem && !selectedWall && activeTool !== 'floor' && (
             <div className="canvas2d-toolbar__actions">
               <span className="canvas2d-toolbar__hint canvas2d-toolbar__hint--dim">
-                {activeTool === 'wall' ? '✏ Click to draw walls · Double-click to finish' : '↖ Click to select · Drag to move · Corner handles to resize · ↻ to rotate'}
+                {activeTool === 'wall' ? '✏ Click to draw walls · Double-click to finish' : '↖ Click an item to select · Drag to move · Use corner handles to resize · ↻ to rotate'}
               </span>
             </div>
           )}
@@ -952,9 +952,10 @@ export default function Canvas2D({ onDesignChange }) {
         {/* Texture panel */}
         {texPanel && (
           <div className="canvas2d-tex-panel">
-            {/* Wall Color */}
-            <div>
-              <div className="canvas2d-tex-section__label"> WALL COLOR</div>
+            <div className="canvas2d-tex-panel__section">
+              <div className="canvas2d-tex-section__header">
+                <div className="canvas2d-tex-section__label">Wall Surface</div>
+              </div>
               <div className="canvas2d-tex-section__swatches">
                 {['#e8e2d8','#2d2a4a','#1a3a4a','#4a2a1a','#1a4a2a','#3a1a4a','#4a3a1a','#1a1a1a','#f5f0e8','#c8b89a'].map(col => (
                   <div key={col} onClick={() => { setWallColor(col); setWallTex(null) }}
@@ -970,9 +971,10 @@ export default function Canvas2D({ onDesignChange }) {
               </div>
             </div>
 
-            {/* Floor Textures */}
-            <div>
-              <div className="canvas2d-tex-section__label"> FLOOR COLOR</div>
+            <div className="canvas2d-tex-panel__section">
+              <div className="canvas2d-tex-section__header">
+                <div className="canvas2d-tex-section__label">Floor Surface</div>
+              </div>
               <div className="canvas2d-tex-section__swatches">
                 {['#f5f2ee','#d7c8aa','#bfa58b','#9b8a72','#7f6c58','#5e5246','#2c2c32','#e8efe6','#c4d0b8','#bcd2e5'].map(col => (
                   <div key={col} onClick={() => { setFloorColor(col); setFloorTex(null) }}
