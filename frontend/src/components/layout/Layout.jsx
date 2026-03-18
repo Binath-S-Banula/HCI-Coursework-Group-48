@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { logout } from '../../store/slices/authSlice'
@@ -13,6 +13,25 @@ export default function Layout() {
   const { user, isAuthenticated } = useSelector((s) => s.auth)
   const isEditor = location.pathname.startsWith('/editor')
   const [dropOpen, setDropOpen] = useState(false)
+  const avatarWrapRef = useRef(null)
+
+  useEffect(() => {
+    if (!dropOpen) return
+    const handleOutsideClick = (event) => {
+      if (avatarWrapRef.current && !avatarWrapRef.current.contains(event.target)) {
+        setDropOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleOutsideClick)
+    return () => document.removeEventListener('mousedown', handleOutsideClick)
+  }, [dropOpen])
+
+  const handleSignOut = useCallback(() => {
+    setDropOpen(false)
+    dispatch(logout())
+    localStorage.removeItem('homeplan3d_pendingFurniture')
+    navigate('/login', { replace: true })
+  }, [dispatch, navigate])
 
   const handleNewDesign = async () => {
     try {
@@ -54,16 +73,34 @@ export default function Layout() {
                   <button className="navbar__btn-primary" onClick={handleNewDesign}>+ New Design</button>
 
                   {/* Avatar + dropdown */}
-                  <div className="navbar__avatar-wrap" onBlur={() => setTimeout(() => setDropOpen(false), 150)}>
+                  <div className="navbar__avatar-wrap" ref={avatarWrapRef}>
                     <button className="navbar__avatar" onClick={() => setDropOpen(!dropOpen)}>
                       {user?.name?.[0]?.toUpperCase() || 'U'}
                     </button>
                     {dropOpen && (
                       <div className="navbar__dropdown">
                         <div className="navbar__dropdown-email">{user?.email}</div>
-                        <button className="navbar__dropdown-item" onClick={() => { navigate('/dashboard'); setDropOpen(false) }}>Dashboard</button>
-                        <button className="navbar__dropdown-item" onClick={() => { handleNewDesign(); setDropOpen(false) }}>New Design</button>
-                        <button className="navbar__dropdown-item navbar__dropdown-item--danger" onClick={() => { dispatch(logout()); setDropOpen(false) }}>Sign Out</button>
+                        <button
+                          className="navbar__dropdown-item"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => { navigate('/dashboard'); setDropOpen(false) }}
+                        >
+                          Dashboard
+                        </button>
+                        <button
+                          className="navbar__dropdown-item"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => { handleNewDesign(); setDropOpen(false) }}
+                        >
+                          New Design
+                        </button>
+                        <button
+                          className="navbar__dropdown-item navbar__dropdown-item--danger"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={handleSignOut}
+                        >
+                          Sign Out
+                        </button>
                       </div>
                     )}
                   </div>
