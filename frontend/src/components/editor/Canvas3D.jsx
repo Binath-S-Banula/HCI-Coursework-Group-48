@@ -31,6 +31,36 @@ function CameraController({ hasWalls, roomSpanMeters = 4 }) {
   return null
 }
 
+function OrbitPanLimiter({ controlsRef, minX, maxX, minZ, maxZ, minY = 0.3, maxY = 2.8 }) {
+  const { camera } = useThree()
+
+  useFrame(() => {
+    const controls = controlsRef.current
+    if (!controls) return
+
+    const { target } = controls
+    const clampedX = THREE.MathUtils.clamp(target.x, minX, maxX)
+    const clampedY = THREE.MathUtils.clamp(target.y, minY, maxY)
+    const clampedZ = THREE.MathUtils.clamp(target.z, minZ, maxZ)
+
+    const deltaX = clampedX - target.x
+    const deltaY = clampedY - target.y
+    const deltaZ = clampedZ - target.z
+
+    if (Math.abs(deltaX) < 0.0001 && Math.abs(deltaY) < 0.0001 && Math.abs(deltaZ) < 0.0001) {
+      return
+    }
+
+    target.set(clampedX, clampedY, clampedZ)
+    camera.position.x += deltaX
+    camera.position.y += deltaY
+    camera.position.z += deltaZ
+    controls.update()
+  })
+
+  return null
+}
+
 
 const CM_PER_WORLD_UNIT = 1
 const LEGACY_CM_PER_WORLD_UNIT = 5
@@ -1366,6 +1396,9 @@ export default function Canvas3D() {
 
   const { width: sceneWidth, depth: sceneDepth } = useMemo(() => getSceneBounds(liveData.walls, liveData.floor), [liveData.walls, liveData.floor])
   const roomSpanMeters = Math.max(sceneWidth, sceneDepth) * SCALE
+  const panLimitHalfWidth = Math.max((sceneWidth * SCALE) / 2 + 1.8, hasDesign ? 3 : 6.8)
+  const panLimitHalfDepth = Math.max((sceneDepth * SCALE) / 2 + 1.8, hasDesign ? 3 : 5.8)
+  const panLimitMaxY = Math.max(WALL_HEIGHT + 1.4, 2.8)
 
   return (
     <div className="canvas3d-root" onDragOver={(e) => e.preventDefault()} onDrop={handleDropFurniture}>
@@ -1421,6 +1454,16 @@ export default function Canvas3D() {
             minDistance={3} maxDistance={30}
             maxPolarAngle={Math.PI / 2.05}
             target={[0, 1, 0]}
+          />
+
+          <OrbitPanLimiter
+            controlsRef={orbitRef}
+            minX={-panLimitHalfWidth}
+            maxX={panLimitHalfWidth}
+            minZ={-panLimitHalfDepth}
+            maxZ={panLimitHalfDepth}
+            minY={0.35}
+            maxY={panLimitMaxY}
           />
 
           {selectedObject && (
