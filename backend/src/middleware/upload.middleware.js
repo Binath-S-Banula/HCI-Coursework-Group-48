@@ -53,6 +53,6 @@ const fileFilter = (req, file, cb) => {
   return cb(new Error('Unsupported file field'))
 }
 
-const upload = multer({ storage, fileFilter, limits: { fileSize: 25 * 1024 * 1024 } }) // 25MB
+const upload = multer({ storage, fileFilter, limits: { fileSize: 100 * 1024 * 1024 } }) // 100MB
 
 module.exports = { upload }
