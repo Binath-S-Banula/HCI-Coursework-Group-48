@@ -612,6 +612,8 @@ export default function Canvas2D({ onDesignChange }) {
       if (op.type === 'door') {
         const design = op.design || 'single'
         const doorStroke = isSel ? '#6c63ff' : '#2d6a4f'
+        const swingDashColor = isSel ? 'rgba(108,99,255,0.98)' : 'rgba(29,126,93,0.98)'
+        const swingDashUnder = 'rgba(255,255,255,0.8)'
 
         if (design === 'double') {
           ctx.strokeStyle = doorStroke
@@ -647,9 +649,19 @@ export default function Canvas2D({ onDesignChange }) {
           const rightStart = wallAngle + Math.PI
           const rightEnd = rightStart - swingSign * (Math.PI / 2)
 
-          ctx.strokeStyle = isSel ? 'rgba(108,99,255,0.5)' : 'rgba(45,106,79,0.4)'
-          ctx.lineWidth = 1
-          ctx.setLineDash([3, 3])
+          ctx.strokeStyle = swingDashUnder
+          ctx.lineWidth = 2.8
+          ctx.setLineDash([])
+          ctx.beginPath()
+          ctx.arc(leftHx, leftHy, W2, leftStart, leftEnd, swingSign < 0)
+          ctx.stroke()
+          ctx.beginPath()
+          ctx.arc(rightHx, rightHy, W2, rightStart, rightEnd, swingSign > 0)
+          ctx.stroke()
+
+          ctx.strokeStyle = swingDashColor
+          ctx.lineWidth = 2
+          ctx.setLineDash([7, 4])
           ctx.beginPath()
           ctx.arc(leftHx, leftHy, W2, leftStart, leftEnd, swingSign < 0)
           ctx.stroke()
@@ -678,15 +690,22 @@ export default function Canvas2D({ onDesignChange }) {
           ctx.lineTo(cx + ux * W2, cy + uy * W2)
           ctx.stroke()
 
-          ctx.strokeStyle = isSel ? 'rgba(108,99,255,0.5)' : 'rgba(45,106,79,0.4)'
-          ctx.lineWidth = 1
-          ctx.setLineDash([3, 3])
+          ctx.strokeStyle = swingDashUnder
+          ctx.lineWidth = 2.8
+          ctx.setLineDash([])
           ctx.beginPath()
           const wallAngle = Math.atan2(uy, ux)
           const hingeX = hinge === 'left' ? (cx - ux * W2) : (cx + ux * W2)
           const hingeY = hinge === 'left' ? (cy - uy * W2) : (cy + uy * W2)
           const startAngle = hinge === 'left' ? wallAngle : (wallAngle + Math.PI)
           const endAngle = startAngle + swingSign * (Math.PI / 2)
+          ctx.arc(hingeX, hingeY, openingWidth, startAngle, endAngle, swingSign < 0)
+          ctx.stroke()
+
+          ctx.strokeStyle = swingDashColor
+          ctx.lineWidth = 2
+          ctx.setLineDash([7, 4])
+          ctx.beginPath()
           ctx.arc(hingeX, hingeY, openingWidth, startAngle, endAngle, swingSign < 0)
           ctx.stroke()
           ctx.setLineDash([])
