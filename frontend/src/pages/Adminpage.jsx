@@ -19,6 +19,7 @@ import { projectService } from '../services/project.service'
 import '../styles/pages/AdminPage.css'
 
 const CATS = ['sofa','chair','table','bed','storage','lighting','kitchen','bathroom','decor']
+const MAX_MODEL_FILE_SIZE = 100 * 1024 * 1024
 const NAV = [
   { id:'dashboard', icon: Grid3X3, label:'Dashboard' },
   { id:'furniture', icon: Box, label:'Furniture' },
@@ -86,6 +87,7 @@ export default function AdminPage() {
   const addFurniture = async () => {
     if (!imageFile)  return flash('Please upload a 2D furniture image', 'error')
     if (!model3dFile) return flash('Please upload a 3D model (.glb or .gltf)', 'error')
+    if (model3dFile.size > MAX_MODEL_FILE_SIZE) return flash('3D model file must be 100MB or smaller', 'error')
     if (!form.name)  return flash('Please enter a furniture name', 'error')
 
     try {
@@ -255,7 +257,7 @@ export default function AdminPage() {
                   {model3dFile ? model3dName : 'Click to upload .glb or .gltf'}
                 </div>
                 <div style={{ fontSize:10, color:'#444', marginTop:2 }}>
-                  Max ~20MB · auto-scales to furniture size in 3D view
+                  Max 100MB · auto-scales to furniture size in 3D view
                 </div>
               </div>
               {model3dFile && (
@@ -266,6 +268,11 @@ export default function AdminPage() {
                 onChange={e => {
                   const f = e.target.files?.[0]
                   if (!f) return
+                  if (f.size > MAX_MODEL_FILE_SIZE) {
+                    flash('3D model file must be 100MB or smaller', 'error')
+                    e.target.value = ''
+                    return
+                  }
                   setModel3dName(f.name)
                   setModel3dFile(f)
                   e.target.value = ''
