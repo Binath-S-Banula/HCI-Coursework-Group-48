@@ -23,14 +23,54 @@
   border: 1px solid rgba(255,255,255,0.1);
   background: transparent; color: #888;
   cursor: pointer; font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   transition: all .15s;
 }
 .canvas2d-toolbar__btn:hover { color: #e8e8f0; border-color: rgba(255,255,255,0.2); }
 
+.canvas2d-toolbar__btn--textures {
+  min-height: 32px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  border-color: rgba(108,99,255,0.24);
+  background: rgba(255,255,255,0.02);
+  color: #c6ccde;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.canvas2d-toolbar__btn--textures:hover {
+  color: #eef0f8;
+  border-color: rgba(108,99,255,0.42);
+  background: rgba(108,99,255,0.08);
+}
+
+.canvas2d-toolbar__btn-label {
+  line-height: 1;
+}
+
+.canvas2d-toolbar__btn-caret {
+  line-height: 1;
+  font-size: 11px;
+  color: #b8bff1;
+  transform: rotate(0deg);
+  transition: transform .15s ease;
+}
+
+.canvas2d-toolbar__btn-caret--open {
+  transform: rotate(180deg);
+}
+
 .canvas2d-toolbar__btn--active {
-  border-color: rgba(67,217,173,0.4);
-  background: rgba(67,217,173,0.1);
-  color: #43d9ad;
+  border-color: rgba(108,99,255,0.5);
+  background: linear-gradient(135deg, rgba(108,99,255,0.28), rgba(108,99,255,0.14));
+  color: #f2f3ff;
+}
+
+.canvas2d-toolbar__btn--active .canvas2d-toolbar__btn-caret {
+  color: #e8e8ff;
 }
 
 .canvas2d-toolbar__bg-range {
