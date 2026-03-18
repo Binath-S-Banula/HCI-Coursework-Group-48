@@ -9,13 +9,13 @@ import {
   CheckCircle2,
   Circle,
   X,
-  Settings,
   LogOut,
   Trash2,
 } from 'lucide-react'
 import { logout } from '../store/slices/authSlice'
 import { furnitureService } from '../services/furniture.service'
 import { projectService } from '../services/project.service'
+import logoImage from '../uploads/homeland-logo-admin.png'
 import '../styles/pages/AdminPage.css'
 
 const CATS = ['sofa','chair','table','bed','storage','lighting','kitchen','bathroom','decor']
@@ -361,11 +361,7 @@ export default function AdminPage() {
       {/* Sidebar */}
       <aside className="admin-sidebar">
         <div className="admin-sidebar__logo">
-          <div className="admin-sidebar__logo-icon"><Settings size={18} /></div>
-          <div className="admin-sidebar__logo-text">
-            <div className="admin-sidebar__logo-name">HomePlan3D</div>
-            <div className="admin-sidebar__logo-badge">Admin Panel</div>
-          </div>
+          <img src={logoImage} alt="HomePlan3D Logo" className="admin-sidebar__logo-image" />
         </div>
 
         <nav className="admin-sidebar__nav">
