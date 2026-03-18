@@ -116,6 +116,9 @@
   flex-direction: column;
   gap: 0.6rem;
 }
+.footer__grid > .footer__col:not(.footer__col--brand) {
+  padding-top: 1rem;
+}
 .footer__col--brand {
   gap: 0.45rem;
 }
@@ -192,6 +195,9 @@
   .footer__grid {
     grid-template-columns: 1fr;
     gap: 1.1rem;
+  }
+  .footer__grid > .footer__col:not(.footer__col--brand) {
+    padding-top: 0;
   }
   .footer__brand-image {
     height: 5.75rem;
