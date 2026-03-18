@@ -113,6 +113,72 @@
   border-radius: 8px;
   padding: 4px 8px;
 }
+.canvas2d-toolbar__actions--item {
+  min-height: 38px;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  border-color: rgba(108,99,255,0.28);
+  background: linear-gradient(135deg, rgba(108,99,255,0.12), rgba(255,255,255,0.04));
+}
+.canvas2d-toolbar__item-meta {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 120px;
+}
+.canvas2d-toolbar__item-name {
+  font-size: 11px;
+  font-weight: 700;
+  color: #eef0ff;
+  line-height: 1.1;
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.canvas2d-toolbar__item-size {
+  font-size: 10px;
+  color: #c7c3ff;
+  line-height: 1.2;
+}
+.canvas2d-toolbar__color-control {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(0,0,0,0.2);
+  cursor: pointer;
+}
+.canvas2d-toolbar__color-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #d8dced;
+}
+.canvas2d-toolbar__color-preview {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.5);
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.2) inset;
+}
+.canvas2d-toolbar__color-input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+.canvas2d-toolbar__item-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
 .canvas2d-toolbar__actions--selection {
   margin-left: auto;
   margin-right: auto;
