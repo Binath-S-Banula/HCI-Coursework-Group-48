@@ -99,13 +99,17 @@
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  padding: 0.2rem 0.5rem;
+  padding: 0.28rem 0.58rem;
   border-radius: 9999px;
-  background: rgba(67,217,173,0.2);
-  border: 1px solid rgba(67,217,173,0.4);
-  color: #43d9ad;
-  font-size: 0.625rem;
-  font-weight: 700;
+  background: rgba(7, 24, 20, 0.86);
+  border: 1px solid rgba(67,217,173,0.65);
+  color: #7ff2cf;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-shadow: 0 0 10px rgba(67,217,173,0.35);
+  box-shadow: 0 3px 14px rgba(0,0,0,0.32);
+  backdrop-filter: blur(4px);
 }
 
 .project-card__body { padding: 1rem; }
