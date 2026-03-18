@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSelector } from 'react-redux'
+import { Armchair, ArrowRight, Box, Camera, Heart, Home, PencilRuler, Search, Share2, Users, Waves } from 'lucide-react'
 import { projectService } from '../services/project.service'
 import '../styles/pages/GalleryPage.css'
 
@@ -14,7 +15,7 @@ const ROOM_GRADIENTS = [
   'linear-gradient(135deg,#1a0a2e,#2d0a4e)',
   'linear-gradient(135deg,#0a1628,#1e3a5f)',
 ]
-const ROOM_EMOJIS = ['🛋️','🛏️','🍳','🛁','💻','🍽️','🪴','🏠']
+const ROOM_ICONS = [Armchair, Home, Box, Camera, PencilRuler, Waves, Users, Share2]
 
 export default function GalleryPage() {
   const navigate = useNavigate()
@@ -125,7 +126,7 @@ export default function GalleryPage() {
         {/* Filters */}
         <div className="gallery-filters">
           <div className="gallery-search-wrap">
-            <span className="gallery-search-icon">🔍</span>
+            <span className="gallery-search-icon" aria-hidden="true"><Search size={15} /></span>
             <input
               className="gallery-search"
               value={search}
@@ -162,7 +163,7 @@ export default function GalleryPage() {
           </div>
         ) : filtered.length === 0 ? (
           <div className="gallery-empty">
-            <div className="gallery-empty__icon">🏠</div>
+            <div className="gallery-empty__icon" aria-hidden="true"><Home size={56} /></div>
             <h3 className="gallery-empty__title">No designs found</h3>
             <p className="gallery-empty__sub">Try adjusting your search or filters</p>
             <button className="gallery-empty__clear" onClick={() => { setSearch(''); setActiveCat('all') }}>
@@ -171,7 +172,9 @@ export default function GalleryPage() {
           </div>
         ) : (
           <div className="gallery-grid">
-            {filtered.map((project, idx) => (
+            {filtered.map((project, idx) => {
+              const RoomIcon = ROOM_ICONS[idx % ROOM_ICONS.length]
+              return (
               <div key={project._id} className="gallery-card" onClick={() => handleOpen(project)}>
 
                 <div className="gallery-card__thumb gallery-card__thumb--3d"
@@ -181,8 +184,8 @@ export default function GalleryPage() {
                     ? <img className="gallery-card__img gallery-card__img--3d" src={project.thumbnail} alt={project.name} />
                     : (
                       <div className="gallery-card__placeholder">
-                        <span className="gallery-card__placeholder-emoji">
-                          {ROOM_EMOJIS[idx % ROOM_EMOJIS.length]}
+                        <span className="gallery-card__placeholder-emoji" aria-hidden="true">
+                          <RoomIcon size={52} />
                         </span>
                         <div className="gallery-card__placeholder-tags">
                           {(project.tags||[]).map(tag => (
@@ -197,7 +200,8 @@ export default function GalleryPage() {
 
                   <div className="gallery-card__overlay">
                     <button className="gallery-card__overlay-btn" onClick={e => { e.stopPropagation(); handleOpen(project) }}>
-                      🧊 Open 3D Interface
+                      <Box size={14} />
+                      Open 3D Interface
                     </button>
                   </div>
 
@@ -212,7 +216,9 @@ export default function GalleryPage() {
                       <div className="gallery-card__author">by {project.owner?.name || 'Unknown'}</div>
                     </div>
                     <button className="gallery-card__like-btn" onClick={e => toggleLike(e, project._id)}>
-                      <span className="gallery-card__like-icon">{liked[project._id] ? '❤️' : '🤍'}</span>
+                      <span className={`gallery-card__like-icon gallery-card__like-icon--${liked[project._id] ? 'active' : 'inactive'}`} aria-hidden="true">
+                        <Heart size={16} fill={liked[project._id] ? 'currentColor' : 'none'} />
+                      </span>
                       <span className={`gallery-card__like-count gallery-card__like-count--${liked[project._id] ? 'active' : 'inactive'}`}>
                         {(project.likes||0) + (liked[project._id] ? 1 : 0)}
                       </span>
@@ -221,12 +227,13 @@ export default function GalleryPage() {
                   <div className="gallery-card__footer">
                     <span className="gallery-card__views">Updated {new Date(project.updatedAt).toLocaleDateString()}</span>
                     <button className="gallery-card__open-btn" onClick={e => { e.stopPropagation(); handleOpen(project) }}>
-                      Open 3D →
+                      Open 3D <ArrowRight size={12} />
                     </button>
                   </div>
                 </div>
               </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>
