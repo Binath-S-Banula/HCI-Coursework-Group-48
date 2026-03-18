@@ -154,7 +154,6 @@ export default function EditorPage() {
             style={{ display:'flex', alignItems:'center', gap:8, background:'none', border:'none', cursor:'pointer', color:'inherit', padding:0 }}
             onClick={() => { doSave(true); navigate('/dashboard') }}>
             <img src={logoImage} alt="HomePlan3D Logo" className="editor-topbar__logo-image" />
-            <span className="editor-topbar__name">HomePlan3D</span>
           </button>
           <span style={{ color:'rgba(255,255,255,0.1)' }}>|</span>
 
