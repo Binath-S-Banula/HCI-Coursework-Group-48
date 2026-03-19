@@ -6,6 +6,7 @@ import { setMode, setTool, toggleGrid, setZoom } from '../store/slices/editorSli
 import Canvas2D from '../components/editor/Canvas2D'
 import Canvas3D from '../components/editor/Canvas3D'
 import EditorToolbar from '../components/editor/EditorToolbar'
+import PropertiesPanel from '../components/editor/PropertiesPanel'
 import FurniturePanel from '../components/furniture/FurniturePanel'
 import { projectService } from '../services/project.service'
 import toast from 'react-hot-toast'
@@ -18,7 +19,7 @@ export default function EditorPage() {
   const navigate      = useNavigate()
   const [searchParams] = useSearchParams()
   const dispatch      = useDispatch()
-  const { mode, zoom, showGrid } = useSelector(s => s.editor)
+  const { mode, zoom, showGrid, activeTool } = useSelector(s => s.editor)
 
   const [project,       setProject]       = useState(null)
   const [projectName,   setProjectName]   = useState('New Project')
@@ -28,6 +29,7 @@ export default function EditorPage() {
   const [lastSaved,     setLastSaved]     = useState(null)
   const [isDirty,       setIsDirty]       = useState(false)
   const [isHelpOpen,    setIsHelpOpen]    = useState(false)
+  const [insightsOpen,  setInsightsOpen]  = useState(false)
   const [stats,         setStats]         = useState({ walls: 0, furniture: 0, openings: 0 })
   const [showWelcome,   setShowWelcome]   = useState(() => sessionStorage.getItem('editor-welcome-seen') !== '1')
   const [canvas3DSessionKey, setCanvas3DSessionKey] = useState(() => Date.now())
@@ -156,23 +158,47 @@ export default function EditorPage() {
       ...state,
       ...(capturedThumbnail ? { thumbnail: capturedThumbnail } : (project?.thumbnail ? { thumbnail: project.thumbnail } : {})),
     }
-    projectService.update(projectId, patch)
-      .then((saved) => {
-        setProject(saved)
-        setLastSaved(new Date())
-        setIsDirty(false)
-        if (!silent) {
-          setIsSaving(false)
-          toast.success('Project saved!')
-        }
-      })
-      .catch(() => {
-        if (!silent) {
-          setIsSaving(false)
-          toast.error('Failed to save project')
-        }
-      })
+    try {
+      const saved = await projectService.update(projectId, patch)
+      setProject(saved)
+      setLastSaved(new Date())
+      setIsDirty(false)
+      if (!silent) {
+        toast.success('Project saved!')
+      }
+      return true
+    } catch {
+      if (!silent) {
+        toast.error('Failed to save project')
+      }
+      return false
+    } finally {
+      if (!silent) {
+        setIsSaving(false)
+      }
+    }
   }, [isDirty, projectId, projectName, project?.thumbnail])
+
+  const leaveEditor = useCallback(async () => {
+    if (isSaving) return
+
+    if (!isDirty) {
+      navigate('/dashboard')
+      return
+    }
+
+    const shouldSave = window.confirm('You have unsaved changes. Press OK to save and leave, or Cancel to stay here.')
+    if (!shouldSave) return
+
+    const saved = await doSave(false)
+    if (saved) {
+      navigate('/dashboard')
+      return
+    }
+
+    const forceLeave = window.confirm('Saving failed. Leave the editor anyway and lose unsaved changes?')
+    if (forceLeave) navigate('/dashboard')
+  }, [doSave, isDirty, isSaving, navigate])
 
   // ── Auto-save every 30s ───────────────────────────────────────────
   useEffect(() => {
@@ -216,6 +242,17 @@ export default function EditorPage() {
   }, [showWelcome])
 
   useEffect(() => {
+    const handleBeforeUnload = (event) => {
+      if (!isDirty) return
+      event.preventDefault()
+      event.returnValue = ''
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [isDirty])
+
+  useEffect(() => {
     const isTypingTarget = (event) => {
       const target = event.target
       if (!target) return false
@@ -231,6 +268,18 @@ export default function EditorPage() {
       if (event.ctrlKey && key === 's') {
         event.preventDefault()
         doSave(false)
+        return
+      }
+
+      if (event.ctrlKey && key === 'z') {
+        event.preventDefault()
+        window.__editorUndo?.()
+        return
+      }
+
+      if (event.ctrlKey && (key === 'y' || (event.shiftKey && key === 'z'))) {
+        event.preventDefault()
+        window.__editorRedo?.()
         return
       }
 
@@ -298,7 +347,7 @@ export default function EditorPage() {
         <div className="editor-topbar__left">
           <button
             style={{ display:'flex', alignItems:'center', gap:8, background:'none', border:'none', cursor:'pointer', color:'inherit', padding:0 }}
-            onClick={() => { doSave(true); navigate('/dashboard') }}>
+            onClick={leaveEditor}>
             <img src={logoImage} alt="HomePlan3D Logo" className="editor-topbar__logo-image" />
           </button>
           <span style={{ color:'rgba(255,255,255,0.1)' }}>|</span>
@@ -353,10 +402,19 @@ export default function EditorPage() {
             <Keyboard size={14} /> Shortcuts
           </button>
           <button
+            onClick={() => {
+              setIsHelpOpen(false)
+              setInsightsOpen(prev => !prev)
+            }}
+            className={`editor-topbar-btn ${insightsOpen ? 'editor-topbar-btn--active' : ''}`}
+            title="Toggle project insights panel">
+            {insightsOpen ? <PanelRightClose size={14} /> : <PanelRightOpen size={14} />} Insights
+          </button>
+          <button
             onClick={() => doSave(false)} className="editor-topbar-btn editor-topbar-btn--save">
             {isSaving ? <><Loader2 size={14} className="editor-spin" /> Saving…</> : <><Save size={14} /> Save</>}
           </button>
-          <button onClick={() => { doSave(true); navigate('/dashboard') }} className="editor-topbar-btn">
+          <button onClick={leaveEditor} className="editor-topbar-btn">
             <ArrowLeft size={14} /> Dashboard
           </button>
         </div>
@@ -420,7 +478,7 @@ export default function EditorPage() {
               <div
                 className="editor-help-overlay"
                 role="dialog"
-                aria-modal="false"
+                aria-modal="true"
                 aria-label="Editor keyboard shortcuts"
                 onClick={(e) => e.stopPropagation()}>
                 <div className="editor-help-overlay__header">
@@ -439,6 +497,32 @@ export default function EditorPage() {
                   <p><strong>+ / -</strong> Zoom in/out (2D)</p>
                   <p><strong>?</strong> Toggle this panel</p>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {insightsOpen && (
+            <div className="editor-help-backdrop" onClick={() => setInsightsOpen(false)}>
+              <div
+                className="editor-help-overlay editor-insights-modal"
+                role="dialog"
+                aria-modal="true"
+                aria-label="Project insights"
+                onClick={(e) => e.stopPropagation()}>
+                <PropertiesPanel
+                  onClose={() => setInsightsOpen(false)}
+                  projectName={projectName}
+                  stats={stats}
+                  mode={mode}
+                  activeTool={activeTool}
+                  showGrid={showGrid}
+                  isDirty={isDirty}
+                  lastSaved={lastSaved}
+                  onOpenHelp={() => {
+                    setInsightsOpen(false)
+                    setIsHelpOpen(true)
+                  }}
+                />
               </div>
             </div>
           )}
@@ -473,6 +557,10 @@ export default function EditorPage() {
         </div>
 
       </div>
+
+      <p className="editor-screenreader-status" aria-live="polite">
+        {isSaving ? 'Saving in progress.' : isDirty ? 'There are unsaved changes.' : 'All changes are saved.'}
+      </p>
     </div>
   )
 }
