@@ -13,30 +13,28 @@ const tools = [
 
 const openingVariants = {
   door: [
-    { id: 'single', label: 'Single Door' },
-    { id: 'double', label: 'Double Door' },
-    { id: 'sliding', label: 'Sliding Door' },
+    { id: 'single', label: 'Single Door', icon: '🚪' },
+    { id: 'double', label: 'Double Door', icon: '🚪🚪' },
+    { id: 'sliding', label: 'Sliding Door', icon: '⇆' },
   ],
   window: [
-    { id: 'casement', label: 'Casement Window' },
-    { id: 'sliding', label: 'Sliding Window' },
-    { id: 'bay', label: 'Bay Window' },
+    { id: 'casement', label: 'Casement Window', icon: '🪟' },
+    { id: 'sliding', label: 'Sliding Window', icon: '⇆' },
+    { id: 'bay', label: 'Bay Window', icon: '⬒' },
   ],
 }
 
 export default function EditorToolbar() {
   const dispatch    = useDispatch()
   const { activeTool, mode, openingDesigns } = useSelector((s) => s.editor)
-  const [expandedTool, setExpandedTool] = useState(null)
+  const [hoveredTool, setHoveredTool] = useState(null)
 
   const selectTool = (toolId, isDisabled) => {
     if (isDisabled) return
     dispatch(setTool(toolId))
-    if (toolId === 'door' || toolId === 'window') {
-      setExpandedTool((prev) => (prev === toolId ? null : toolId))
-      return
+    if (toolId !== 'door' && toolId !== 'window') {
+      setHoveredTool(null)
     }
-    setExpandedTool(null)
   }
 
   const selectVariant = (toolId, designId) => {
@@ -53,15 +51,25 @@ export default function EditorToolbar() {
         const isDisabled = mode === '3d' && t.id !== 'select'
         const Icon = t.icon
         const isOpeningTool = t.id === 'door' || t.id === 'window'
-        const isExpanded = expandedTool === t.id && isOpeningTool && !isDisabled
+        const isExpanded = hoveredTool === t.id && isOpeningTool && !isDisabled
         const variants = openingVariants[t.id] || []
         const selectedVariant = openingDesigns?.[t.id]
 
         return (
-          <div key={t.id} className="editor-tool-group">
+          <div
+            key={t.id}
+            className="editor-tool-group"
+            onMouseEnter={() => { if (isOpeningTool && !isDisabled) setHoveredTool(t.id) }}
+            onMouseLeave={() => { if (isOpeningTool) setHoveredTool(null) }}
+            onFocusCapture={() => { if (isOpeningTool && !isDisabled) setHoveredTool(t.id) }}
+            onBlurCapture={(e) => {
+              if (!isOpeningTool) return
+              if (!e.currentTarget.contains(e.relatedTarget)) setHoveredTool(null)
+            }}>
             <button
               type="button"
               onClick={() => selectTool(t.id, isDisabled)}
+              onFocus={() => { if (isOpeningTool && !isDisabled) setHoveredTool(t.id) }}
               title={`${t.label} (${t.key})`}
               disabled={isDisabled}
               className={`editor-tool-btn ${isActive ? 'editor-tool-btn--active' : 'editor-tool-btn--inactive'} ${isDisabled ? 'editor-tool-btn--disabled' : ''}`}>
@@ -88,7 +96,8 @@ export default function EditorToolbar() {
                       type="button"
                       className={`editor-tool-variant-btn ${isVariantActive ? 'editor-tool-variant-btn--active' : ''}`}
                       onClick={() => selectVariant(t.id, variant.id)}>
-                      {variant.label}
+                      <span className="editor-tool-variant-btn__icon" aria-hidden="true">{variant.icon}</span>
+                      <span className="editor-tool-variant-btn__text">{variant.label}</span>
                     </button>
                   )
                 })}

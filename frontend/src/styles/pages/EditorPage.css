@@ -31,6 +31,32 @@
 .editor-topbar__center { display: flex; align-items: center; gap: 0.5rem; }
 .editor-topbar__right  { display: flex; align-items: center; gap: 0.5rem; }
 
+.editor-save-state {
+  font-size: 0.69rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.editor-save-state--saving {
+  color: #a5b4fc;
+  background: rgba(108,99,255,0.12);
+  border-color: rgba(108,99,255,0.25);
+}
+
+.editor-save-state--dirty {
+  color: #fbbf24;
+  background: rgba(251,191,36,0.12);
+  border-color: rgba(251,191,36,0.28);
+}
+
+.editor-save-state--saved {
+  color: #43d9ad;
+  background: rgba(67,217,173,0.1);
+  border-color: rgba(67,217,173,0.22);
+}
+
 /* Mode toggle */
 .editor-mode-toggle {
   display: flex; gap: 0.25rem;
@@ -210,6 +236,25 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.editor-tool-variant-btn__icon {
+  min-width: 1.1rem;
+  width: max-content;
+  display: inline-block;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.78rem;
+  line-height: 1;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.editor-tool-variant-btn__text {
+  min-width: 0;
 }
 
 .editor-tool-variant-btn:hover {
@@ -346,14 +391,139 @@
 /* Grid toggle */
 .editor-grid-toggle { position: absolute; bottom: 1rem; left: 1rem; }
 
-/* Side panels */
-.editor-side-panel {
-  border-left: 1px solid rgba(255,255,255,0.05);
-  background: #13131f; display: flex; flex-direction: column;
-  flex-shrink: 0; overflow: hidden;
+.editor-welcome-card {
+  position: absolute;
+  top: 0.9rem;
+  right: 0.95rem;
+  width: 18.5rem;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(108,99,255,0.32);
+  background: linear-gradient(145deg, rgba(108,99,255,0.22), rgba(19,19,31,0.96));
+  color: #e8e8f0;
+  padding: 0.7rem 0.78rem;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.24);
+  z-index: 8;
+  animation: editor-fade-in 0.22s ease;
 }
 
-.editor-side-panel--narrow {
-  width: 14rem;
-  min-width: 14rem;
+.editor-welcome-card__title {
+  font-size: 0.77rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.35rem;
+}
+
+.editor-welcome-card__line {
+  color: #d1d6e6;
+  font-size: 0.73rem;
+  line-height: 1.35;
+}
+
+.editor-welcome-card__dismiss {
+  margin-top: 0.5rem;
+  border: 1px solid rgba(255,255,255,0.16);
+  border-radius: 0.48rem;
+  background: rgba(255,255,255,0.04);
+  color: #f2f4fb;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.24rem 0.48rem;
+  cursor: pointer;
+}
+
+.editor-help-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 3.6rem 1rem 1rem;
+  background: rgba(13, 13, 20, 0.08);
+}
+
+.editor-help-overlay {
+  position: relative;
+  transform: none;
+  width: min(40rem, calc(100% - 2rem));
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 0.95rem;
+  background: rgba(19,19,31,0.97);
+  color: #eef0f8;
+  z-index: 10;
+  box-shadow: 0 18px 40px rgba(0,0,0,0.32);
+  overflow: hidden;
+  animation: editor-help-overlay-enter 0.18s ease;
+}
+
+.editor-help-overlay__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255,255,255,0.09);
+  padding: 0.65rem 0.85rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.editor-help-overlay__header span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.38rem;
+}
+
+.editor-help-overlay__header button {
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 0.45rem;
+  background: rgba(255,255,255,0.03);
+  color: #d7dcef;
+  padding: 0.24rem 0.52rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.editor-help-overlay__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.38rem 0.75rem;
+  padding: 0.75rem 0.85rem 0.9rem;
+}
+
+.editor-help-overlay__grid p {
+  margin: 0;
+  font-size: 0.74rem;
+  color: #cad1e5;
+}
+
+.editor-help-overlay__grid strong {
+  color: #a78bfa;
+  margin-right: 0.28rem;
+}
+
+.editor-page button:focus-visible,
+.editor-page input:focus-visible {
+  outline: 2px solid rgba(108,99,255,0.7);
+  outline-offset: 2px;
+}
+
+@media (max-width: 1100px) {
+  .editor-help-overlay__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .editor-welcome-card {
+    width: 15.5rem;
+  }
+}
+
+@keyframes editor-fade-in {
+  from { opacity: 0; transform: translateY(-3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes editor-help-overlay-enter {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
 }

@@ -1,33 +1,81 @@
-export default function PropertiesPanel({ onClose }) {
+export default function PropertiesPanel({
+  onClose,
+  projectName,
+  stats,
+  mode,
+  activeTool,
+  showGrid,
+  isDirty,
+  lastSaved,
+  onOpenHelp,
+}) {
+  const saveStatus = isDirty
+    ? 'Unsaved changes'
+    : lastSaved
+      ? `Saved at ${lastSaved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+      : 'No saves yet'
+
+  const roomReady = (stats?.walls || 0) >= 4
+  const floorReady = (stats?.walls || 0) > 0 && (stats?.furniture || 0) > 0
+  const detailReady = (stats?.openings || 0) > 0
+
   return (
-    <div style={{ padding: 14 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <span style={{ fontWeight: 800, fontSize: 14, fontFamily: 'Syne, sans-serif' }}>Properties</span>
-        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#555', fontSize: 16 }}>✕</button>
-      </div>
-      {[
-        { label: 'X Position', val: '0 cm' },
-        { label: 'Y Position', val: '0 cm' },
-        { label: 'Rotation',   val: '0°' },
-        { label: 'Width',      val: '100 cm' },
-        { label: 'Height',     val: '80 cm' },
-      ].map(p => (
-        <div key={p.label} style={{ marginBottom: 12 }}>
-          <label style={{ fontSize: 11, color: '#555', display: 'block', marginBottom: 4 }}>{p.label}</label>
-          <input defaultValue={p.val}
-            style={{ width: '100%', padding: '6px 10px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 7, color: '#e8e8f0', fontSize: 12, outline: 'none', boxSizing: 'border-box' }} />
+    <section className="editor-insights" aria-label="Editor insights panel">
+      <header className="editor-insights__header">
+        <div>
+          <p className="editor-insights__eyebrow">Project insights</p>
+          <h3 className="editor-insights__title">{projectName || 'Untitled project'}</h3>
         </div>
-      ))}
-      <div style={{ marginBottom: 16 }}>
-        <label style={{ fontSize: 11, color: '#555', display: 'block', marginBottom: 6 }}>Color</label>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {['#f5f0eb','#4a4a6a','#8b6914','#43d9ad','#6c63ff','#ff6b6b'].map(c => (
-            <div key={c} style={{ width: 24, height: 24, borderRadius: 6, background: c, cursor: 'pointer', border: '2px solid transparent', transition: 'border .15s' }}
-              onMouseEnter={e => e.currentTarget.style.border = '2px solid #fff'}
-              onMouseLeave={e => e.currentTarget.style.border = '2px solid transparent'} />
-          ))}
-        </div>
+        <button type="button" className="editor-insights__close" onClick={onClose} aria-label="Close insights panel">✕</button>
+      </header>
+
+      <div className="editor-insights__status">
+        <span className={`editor-insights__pill ${isDirty ? 'editor-insights__pill--dirty' : 'editor-insights__pill--saved'}`}>
+          {saveStatus}
+        </span>
+        <span className="editor-insights__meta">Mode {mode?.toUpperCase() || '2D'} · Tool {activeTool || 'select'}</span>
       </div>
-    </div>
+
+      <section className="editor-insights__section">
+        <p className="editor-insights__section-title">Current model</p>
+        <div className="editor-insights__stats-grid">
+          <article className="editor-insights__stat-card">
+            <span className="editor-insights__stat-label">Walls</span>
+            <strong className="editor-insights__stat-value">{stats?.walls || 0}</strong>
+          </article>
+          <article className="editor-insights__stat-card">
+            <span className="editor-insights__stat-label">Furniture</span>
+            <strong className="editor-insights__stat-value">{stats?.furniture || 0}</strong>
+          </article>
+          <article className="editor-insights__stat-card">
+            <span className="editor-insights__stat-label">Doors / windows</span>
+            <strong className="editor-insights__stat-value">{stats?.openings || 0}</strong>
+          </article>
+          <article className="editor-insights__stat-card">
+            <span className="editor-insights__stat-label">Grid</span>
+            <strong className="editor-insights__stat-value">{showGrid ? 'On' : 'Off'}</strong>
+          </article>
+        </div>
+      </section>
+
+      <section className="editor-insights__section">
+        <p className="editor-insights__section-title">Progress checklist</p>
+        <ul className="editor-insights__checklist">
+          <li className={roomReady ? 'editor-insights__check--done' : ''}>{roomReady ? '✓' : '○'} Room structure completed (4+ walls)</li>
+          <li className={floorReady ? 'editor-insights__check--done' : ''}>{floorReady ? '✓' : '○'} Functional layout with furniture</li>
+          <li className={detailReady ? 'editor-insights__check--done' : ''}>{detailReady ? '✓' : '○'} Architectural details (doors/windows)</li>
+        </ul>
+      </section>
+
+      <section className="editor-insights__section">
+        <p className="editor-insights__section-title">HCI quality tips</p>
+        <ul className="editor-insights__tips">
+          <li>Keep pathways clear by aligning furniture to the grid.</li>
+          <li>Use 2D for precise editing and 3D for visual validation.</li>
+          <li>Save after major changes to keep gallery thumbnails current.</li>
+        </ul>
+        <button type="button" className="editor-insights__help-btn" onClick={onOpenHelp}>Open shortcut guide</button>
+      </section>
+    </section>
   )
 }

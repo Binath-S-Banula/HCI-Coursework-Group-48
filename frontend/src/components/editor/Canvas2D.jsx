@@ -1,5 +1,5 @@
 import { useRef, useEffect, useLayoutEffect, useState, useCallback } from 'react'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, RotateCcw, RotateCw, Trash2 } from 'lucide-react'
 import '../../styles/editor/Canvas2D.css'
 import { useSelector } from 'react-redux'
 
@@ -491,12 +491,18 @@ export default function Canvas2D({ onDesignChange }) {
         const handles = getItemHandles(item)
         const hr = HANDLE_R / zoom
         ;[handles.tl, handles.tr, handles.br, handles.bl].forEach(pt => {
+          ctx.beginPath(); ctx.arc(pt.x, pt.y, hr * 1.45, 0, Math.PI * 2)
+          ctx.fillStyle = 'rgba(108,99,255,0.22)'; ctx.fill()
           ctx.beginPath(); ctx.arc(pt.x, pt.y, hr, 0, Math.PI * 2)
           ctx.fillStyle = '#fff'; ctx.fill(); ctx.strokeStyle = '#6c63ff'; ctx.lineWidth = 1.5 / zoom; ctx.stroke()
+          const dot = Math.max(1.1 / zoom, hr * 0.24)
+          ctx.beginPath(); ctx.arc(pt.x, pt.y, dot, 0, Math.PI * 2)
+          ctx.fillStyle = '#6c63ff'; ctx.fill()
         })
         ctx.setLineDash([3 / zoom, 3 / zoom]); ctx.strokeStyle = 'rgba(108,99,255,0.5)'; ctx.lineWidth = 1 / zoom
         ctx.beginPath(); ctx.moveTo(cx, y); ctx.lineTo(handles.rot.x, handles.rot.y); ctx.stroke(); ctx.setLineDash([])
-        ctx.beginPath(); ctx.arc(handles.rot.x, handles.rot.y, hr * 1.2, 0, Math.PI * 2); ctx.fillStyle = '#6c63ff'; ctx.fill()
+        ctx.beginPath(); ctx.arc(handles.rot.x, handles.rot.y, hr * 1.55, 0, Math.PI * 2); ctx.fillStyle = 'rgba(108,99,255,0.25)'; ctx.fill()
+        ctx.beginPath(); ctx.arc(handles.rot.x, handles.rot.y, hr * 1.2, 0, Math.PI * 2); ctx.fillStyle = '#6c63ff'; ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.3 / zoom; ctx.stroke()
         ctx.fillStyle = '#fff'; ctx.font = `bold ${10 / zoom}px sans-serif`; ctx.textAlign = 'center'
         ctx.fillText('↻', handles.rot.x, handles.rot.y + 3.5 / zoom)
         const bw = 52 / zoom, bh = 16 / zoom
@@ -1086,10 +1092,20 @@ export default function Canvas2D({ onDesignChange }) {
                 <input type="color" value={selItem.color || '#8b6b4a'} onChange={e => updateSelectedColor(e.target.value)} className="canvas2d-toolbar__color-input" />
               </label>
               <div className="canvas2d-toolbar__item-actions">
-                <button onClick={() => rotateSelected(-Math.PI / 2)} className="canvas2d-toolbar__action-btn canvas2d-toolbar__action-btn--purple">↺ 90°</button>
-                <button onClick={() => rotateSelected(Math.PI / 2)}  className="canvas2d-toolbar__action-btn canvas2d-toolbar__action-btn--purple">↻ 90°</button>
-                <button onClick={deleteSelected} className="canvas2d-toolbar__action-btn canvas2d-toolbar__action-btn--red">🗑 Delete</button>
+                <button onClick={() => rotateSelected(-Math.PI / 2)} className="canvas2d-toolbar__action-btn canvas2d-toolbar__action-btn--purple" title="Rotate 90° left">
+                  <RotateCcw size={13} />
+                  <span>90°</span>
+                </button>
+                <button onClick={() => rotateSelected(Math.PI / 2)} className="canvas2d-toolbar__action-btn canvas2d-toolbar__action-btn--purple" title="Rotate 90° right">
+                  <RotateCw size={13} />
+                  <span>90°</span>
+                </button>
+                <button onClick={deleteSelected} className="canvas2d-toolbar__action-btn canvas2d-toolbar__action-btn--red" title="Delete selected furniture">
+                  <Trash2 size={13} />
+                  <span>Delete</span>
+                </button>
               </div>
+              <span className="canvas2d-toolbar__item-tip">Drag corner handles to resize</span>
             </div>
           )}
 

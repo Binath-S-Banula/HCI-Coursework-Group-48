@@ -1,13 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
-import { ArrowLeft, Grid3X3, Loader2, Minus, PanelRightClose, PanelRightOpen, Plus, Save } from 'lucide-react'
-import { setMode, toggleGrid, setZoom } from '../store/slices/editorSlice'
+import { ArrowLeft, Grid3X3, Keyboard, Loader2, Minus, PanelRightClose, PanelRightOpen, Plus, Save } from 'lucide-react'
+import { setMode, setTool, toggleGrid, setZoom } from '../store/slices/editorSlice'
 import Canvas2D from '../components/editor/Canvas2D'
 import Canvas3D from '../components/editor/Canvas3D'
 import EditorToolbar from '../components/editor/EditorToolbar'
 import FurniturePanel from '../components/furniture/FurniturePanel'
-import PropertiesPanel from '../components/editor/PropertiesPanel'
 import { projectService } from '../services/project.service'
 import toast from 'react-hot-toast'
 import logoImage from '../uploads/homeland-logo.png'
@@ -19,18 +18,29 @@ export default function EditorPage() {
   const navigate      = useNavigate()
   const [searchParams] = useSearchParams()
   const dispatch      = useDispatch()
-  const { mode, zoom } = useSelector(s => s.editor)
+  const { mode, zoom, showGrid } = useSelector(s => s.editor)
 
   const [project,       setProject]       = useState(null)
   const [projectName,   setProjectName]   = useState('New Project')
   const [renamingTitle, setRenamingTitle] = useState(false)
   const [furnitureOpen, setFurnitureOpen] = useState(true)
-  const [propsOpen,     setPropsOpen]     = useState(false)
   const [isSaving,      setIsSaving]      = useState(false)
   const [lastSaved,     setLastSaved]     = useState(null)
+  const [isDirty,       setIsDirty]       = useState(false)
+  const [isHelpOpen,    setIsHelpOpen]    = useState(false)
+  const [stats,         setStats]         = useState({ walls: 0, furniture: 0, openings: 0 })
+  const [showWelcome,   setShowWelcome]   = useState(() => sessionStorage.getItem('editor-welcome-seen') !== '1')
   const [canvas3DSessionKey, setCanvas3DSessionKey] = useState(() => Date.now())
   const autoSaveTimer = useRef(null)
   const changeAutoSaveTimer = useRef(null)
+
+  const refreshStats = useCallback(() => {
+    setStats({
+      walls: (window.__editorWalls || []).length,
+      furniture: (window.__editorPlaced || []).length,
+      openings: (window.__editorOpenings || []).length,
+    })
+  }, [])
 
   useEffect(() => {
     setCanvas3DSessionKey(Date.now())
@@ -71,6 +81,12 @@ export default function EditorPage() {
         window.__editorWallColor = proj.wallColor || '#e8e2d8'
         window.__editorLightIntensity = Number.isFinite(Number(proj.lightIntensity)) ? Number(proj.lightIntensity) : 1
         window.__editorTimeOfDay = ['morning', 'day', 'evening', 'night'].includes(proj.timeOfDay) ? proj.timeOfDay : 'day'
+        setStats({
+          walls: (proj.walls || []).length,
+          furniture: (proj.placed || []).length,
+          openings: (proj.openings || []).length,
+        })
+        setIsDirty(false)
 
         // Signal canvases to reload from globals
         window.__editorRestoreSignal = Date.now()
@@ -130,6 +146,7 @@ export default function EditorPage() {
   // ── Save ──────────────────────────────────────────────────────────
   const doSave = useCallback(async (silent = false) => {
     if (!projectId) return
+    if (silent && !isDirty) return
     if (!silent) setIsSaving(true)
 
     const state = collectState()
@@ -143,6 +160,7 @@ export default function EditorPage() {
       .then((saved) => {
         setProject(saved)
         setLastSaved(new Date())
+        setIsDirty(false)
         if (!silent) {
           setIsSaving(false)
           toast.success('Project saved!')
@@ -154,7 +172,7 @@ export default function EditorPage() {
           toast.error('Failed to save project')
         }
       })
-  }, [projectId, projectName, project?.thumbnail])
+  }, [isDirty, projectId, projectName, project?.thumbnail])
 
   // ── Auto-save every 30s ───────────────────────────────────────────
   useEffect(() => {
@@ -173,6 +191,8 @@ export default function EditorPage() {
 
     const handleEditorStateChange = () => {
       if (window.__editorRestoreSignal) return
+      refreshStats()
+      setIsDirty(true)
       clearTimeout(changeAutoSaveTimer.current)
       changeAutoSaveTimer.current = setTimeout(() => {
         doSave(true)
@@ -184,7 +204,83 @@ export default function EditorPage() {
       window.removeEventListener('editor-state-change', handleEditorStateChange)
       clearTimeout(changeAutoSaveTimer.current)
     }
-  }, [projectId, doSave])
+  }, [projectId, doSave, refreshStats])
+
+  useEffect(() => {
+    if (!showWelcome) return
+    const timer = setTimeout(() => {
+      setShowWelcome(false)
+      sessionStorage.setItem('editor-welcome-seen', '1')
+    }, 8000)
+    return () => clearTimeout(timer)
+  }, [showWelcome])
+
+  useEffect(() => {
+    const isTypingTarget = (event) => {
+      const target = event.target
+      if (!target) return false
+      const tag = target.tagName?.toLowerCase()
+      return target.isContentEditable || tag === 'input' || tag === 'textarea' || tag === 'select'
+    }
+
+    const handleShortcuts = (event) => {
+      if (isTypingTarget(event)) return
+
+      const key = String(event.key || '').toLowerCase()
+
+      if (event.ctrlKey && key === 's') {
+        event.preventDefault()
+        doSave(false)
+        return
+      }
+
+      if (key === 'tab') {
+        event.preventDefault()
+        dispatch(setMode(mode === '2d' ? '3d' : '2d'))
+        return
+      }
+
+      if (key === '?') {
+        event.preventDefault()
+        setIsHelpOpen(prev => !prev)
+        return
+      }
+
+      if (key === 'escape') {
+        setIsHelpOpen(false)
+        return
+      }
+
+      if (key === 'g' && mode === '2d') {
+        event.preventDefault()
+        dispatch(toggleGrid())
+        return
+      }
+
+      const toolKeyMap = { v: 'select', w: 'wall', f: 'floor', d: 'door', n: 'window' }
+      if (toolKeyMap[key] && mode === '2d') {
+        dispatch(setTool(toolKeyMap[key]))
+        return
+      }
+
+      if (mode === '2d') {
+        if (key === '+' || key === '=') {
+          dispatch(setZoom(zoom + 0.1))
+          return
+        }
+        if (key === '-' || key === '_') {
+          dispatch(setZoom(Math.max(0.1, zoom - 0.1)))
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleShortcuts)
+    return () => window.removeEventListener('keydown', handleShortcuts)
+  }, [dispatch, doSave, mode, zoom])
+
+  useEffect(() => {
+    refreshStats()
+  }, [refreshStats])
 
   // ── Rename ────────────────────────────────────────────────────────
   const commitRename = (newName) => {
@@ -229,10 +325,11 @@ export default function EditorPage() {
             </span>
           )}
 
-          {isSaving && <span style={{ color:'#555', fontSize:'0.75rem' }}>Saving…</span>}
-          {lastSaved && !isSaving && (
-            <span style={{ color:'#333', fontSize:'0.7rem' }}>
-              Saved {lastSaved.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })}
+          {isSaving && <span className="editor-save-state editor-save-state--saving">Saving…</span>}
+          {!isSaving && isDirty && <span className="editor-save-state editor-save-state--dirty">Unsaved changes</span>}
+          {lastSaved && !isSaving && !isDirty && (
+            <span className="editor-save-state editor-save-state--saved">
+              Saved {lastSaved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </span>
           )}
         </div>
@@ -249,7 +346,14 @@ export default function EditorPage() {
         </div>
 
         <div className="editor-topbar__right">
-          <button onClick={() => doSave(false)} className="editor-topbar-btn editor-topbar-btn--save">
+          <button
+            onClick={() => setIsHelpOpen(prev => !prev)}
+            className={`editor-topbar-btn ${isHelpOpen ? 'editor-topbar-btn--active' : ''}`}
+            title="Shortcuts and guidance ( ? )">
+            <Keyboard size={14} /> Shortcuts
+          </button>
+          <button
+            onClick={() => doSave(false)} className="editor-topbar-btn editor-topbar-btn--save">
             {isSaving ? <><Loader2 size={14} className="editor-spin" /> Saving…</> : <><Save size={14} /> Save</>}
           </button>
           <button onClick={() => { doSave(true); navigate('/dashboard') }} className="editor-topbar-btn">
@@ -268,7 +372,7 @@ export default function EditorPage() {
           {/* Render only the active canvas to avoid hidden heavy renders */}
           {project && mode === '2d' && (
             <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column' }}>
-              <Canvas2D onPropertiesOpen={() => setPropsOpen(true)} />
+              <Canvas2D />
             </div>
           )}
 
@@ -290,7 +394,52 @@ export default function EditorPage() {
           {/* Grid toggle — 2D only */}
           {mode === '2d' && (
             <div className="editor-grid-toggle">
-              <button className="editor-topbar-btn" onClick={() => dispatch(toggleGrid())}><Grid3X3 size={14} /> Grid</button>
+              <button className={`editor-topbar-btn ${showGrid ? 'editor-topbar-btn--active' : ''}`} onClick={() => dispatch(toggleGrid())}><Grid3X3 size={14} /> Grid</button>
+            </div>
+          )}
+
+          {showWelcome && (
+            <div className="editor-welcome-card" role="status" aria-live="polite">
+              <div className="editor-welcome-card__title">Quick start</div>
+              <div className="editor-welcome-card__line">Use W to draw walls, F to set floor, drag furniture from the right.</div>
+              <div className="editor-welcome-card__line">Press ? any time for full shortcuts.</div>
+              <button
+                type="button"
+                className="editor-welcome-card__dismiss"
+                onClick={() => {
+                  setShowWelcome(false)
+                  sessionStorage.setItem('editor-welcome-seen', '1')
+                }}>
+                Dismiss
+              </button>
+            </div>
+          )}
+
+          {isHelpOpen && (
+            <div className="editor-help-backdrop" onClick={() => setIsHelpOpen(false)}>
+              <div
+                className="editor-help-overlay"
+                role="dialog"
+                aria-modal="false"
+                aria-label="Editor keyboard shortcuts"
+                onClick={(e) => e.stopPropagation()}>
+                <div className="editor-help-overlay__header">
+                  <span><Keyboard size={14} /> Keyboard shortcuts</span>
+                  <button type="button" onClick={() => setIsHelpOpen(false)}>Close</button>
+                </div>
+                <div className="editor-help-overlay__grid">
+                  <p><strong>V</strong> Select</p>
+                  <p><strong>W</strong> Wall</p>
+                  <p><strong>F</strong> Floor</p>
+                  <p><strong>D</strong> Door</p>
+                  <p><strong>N</strong> Window</p>
+                  <p><strong>Tab</strong> Toggle 2D/3D</p>
+                  <p><strong>Ctrl+S</strong> Save now</p>
+                  <p><strong>G</strong> Toggle grid (2D)</p>
+                  <p><strong>+ / -</strong> Zoom in/out (2D)</p>
+                  <p><strong>?</strong> Toggle this panel</p>
+                </div>
+              </div>
             </div>
           )}
 
@@ -323,12 +472,6 @@ export default function EditorPage() {
           </div>
         </div>
 
-        {/* Properties panel */}
-        {propsOpen && (
-          <div className="editor-side-panel editor-side-panel--narrow">
-            <PropertiesPanel onClose={() => setPropsOpen(false)} />
-          </div>
-        )}
       </div>
     </div>
   )
