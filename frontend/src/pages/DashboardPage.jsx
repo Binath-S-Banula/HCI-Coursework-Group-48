@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 import toast from 'react-hot-toast'
-import { Edit3, Globe, Home, Pencil, Plus, Sparkles, Trash2, Waves } from 'lucide-react'
+import { Edit3, Globe, Home, Pencil, Plus, Search, Sparkles, Trash2, Waves } from 'lucide-react'
 import { projectService } from '../services/project.service'
 import '../styles/pages/DashboardPage.css'
 
@@ -121,6 +121,8 @@ export default function DashboardPage() {
   const [projects, setProjects] = useState([])
   const [loading,  setLoading]  = useState(true)
   const [deleting, setDeleting] = useState(null)
+  const [search, setSearch] = useState('')
+  const [confirmAction, setConfirmAction] = useState(null)
 
   const readPendingFurniture = () => {
     try {
@@ -267,6 +269,54 @@ export default function DashboardPage() {
     }
   }
 
+  const openDeleteConfirm = (project) => {
+    setConfirmAction({ type: 'delete', project })
+  }
+
+  const openShareConfirm = (project) => {
+    setConfirmAction({ type: project.isPublic ? 'unshare' : 'share', project })
+  }
+
+  const closeConfirm = () => {
+    setConfirmAction(null)
+  }
+
+  const confirmAndRunAction = async () => {
+    if (!confirmAction?.project) return
+
+    const { type, project } = confirmAction
+    closeConfirm()
+
+    if (type === 'delete') {
+      handleDelete(project._id)
+      return
+    }
+
+    await handleTogglePublic(project)
+  }
+
+  const confirmTitle = confirmAction?.type === 'delete'
+    ? 'Delete project?'
+    : confirmAction?.type === 'unshare'
+      ? 'Unshare project?'
+      : 'Share project?'
+
+  const confirmMessage = confirmAction?.type === 'delete'
+    ? `This will permanently delete "${confirmAction?.project?.name}".`
+    : confirmAction?.type === 'unshare'
+      ? `"${confirmAction?.project?.name}" will be removed from the gallery.`
+      : `"${confirmAction?.project?.name}" will be visible in the gallery.`
+
+  const confirmButtonLabel = confirmAction?.type === 'delete'
+    ? 'Delete'
+    : confirmAction?.type === 'unshare'
+      ? 'Unshare'
+      : 'Share'
+
+  const filteredProjects = projects.filter((project) =>
+    project.name?.toLowerCase().includes(search.trim().toLowerCase())
+  )
+
   return (
     <div className="dashboard">
       <div className="dashboard__inner">
@@ -287,6 +337,18 @@ export default function DashboardPage() {
           )}
         </div>
 
+        {!loading && projects.length > 0 && (
+          <div className="dashboard-search-wrap">
+            <span className="dashboard-search-icon" aria-hidden="true"><Search size={14} strokeWidth={2.1} /></span>
+            <input
+              className="dashboard-search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search projects..."
+            />
+          </div>
+        )}
+
         {/* Grid */}
         {loading ? (
           <div className="projects-grid">
@@ -299,6 +361,12 @@ export default function DashboardPage() {
             <p className="dashboard-empty__sub">Start designing your dream home today</p>
             <button className="dashboard-empty__btn" onClick={handleCreate}>Create Your First Project</button>
           </div>
+        ) : filteredProjects.length === 0 ? (
+          <div className="dashboard-empty">
+            <div className="dashboard-empty__icon"><Search size={48} strokeWidth={1.7} /></div>
+            <h3 className="dashboard-empty__title">No matching projects</h3>
+            <p className="dashboard-empty__sub">Try a different project name</p>
+          </div>
         ) : (
           <div className="projects-grid">
             {/* New project tile */}
@@ -307,17 +375,37 @@ export default function DashboardPage() {
               <span className="project-card--new-label">New Project</span>
             </button>
 
-            {projects.map(p => (
+            {filteredProjects.map(p => (
               <div key={p._id} style={{ opacity: deleting === p._id ? 0.4 : 1, transition: 'opacity 0.3s' }}>
                 <ProjectCard
                   project={p}
                   onEdit={() => handleEdit(p)}
-                  onTogglePublic={() => handleTogglePublic(p)}
-                  onDelete={() => handleDelete(p._id)}
+                  onTogglePublic={() => openShareConfirm(p)}
+                  onDelete={() => openDeleteConfirm(p)}
                   onRename={(name) => handleRename(p._id, name)}
                 />
               </div>
             ))}
+          </div>
+        )}
+
+        {confirmAction && (
+          <div className="dashboard-confirm" onClick={closeConfirm}>
+            <div className="dashboard-confirm__modal" onClick={(e) => e.stopPropagation()}>
+              <h3 className="dashboard-confirm__title">{confirmTitle}</h3>
+              <p className="dashboard-confirm__message">{confirmMessage}</p>
+              <div className="dashboard-confirm__actions">
+                <button className="dashboard-confirm__btn dashboard-confirm__btn--cancel" onClick={closeConfirm}>
+                  Cancel
+                </button>
+                <button
+                  className={`dashboard-confirm__btn dashboard-confirm__btn--${confirmAction.type === 'delete' ? 'danger' : 'primary'}`}
+                  onClick={confirmAndRunAction}
+                >
+                  {confirmButtonLabel}
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

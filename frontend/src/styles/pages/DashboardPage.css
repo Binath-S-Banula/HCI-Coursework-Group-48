@@ -31,6 +31,39 @@
 .plan-badge--pro { background: rgba(108,99,255,0.15); color: #a78bfa; border: 1px solid rgba(108,99,255,0.3); }
 .plan-badge--business { background: rgba(67,217,173,0.15); color: #43d9ad; border: 1px solid rgba(67,217,173,0.3); }
 
+.dashboard-search-wrap {
+  position: relative;
+  margin: 0 0 1.25rem;
+  max-width: 22rem;
+}
+
+.dashboard-search-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #8b90a3;
+  pointer-events: none;
+}
+
+.dashboard-search {
+  width: 100%;
+  height: 2.5rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255,255,255,0.09);
+  background: rgba(255,255,255,0.03);
+  color: #e8e8f0;
+  padding: 0 0.85rem 0 2.2rem;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.dashboard-search:focus {
+  border-color: rgba(108,99,255,0.5);
+  box-shadow: 0 0 0 3px rgba(108,99,255,0.16);
+}
+
 /* Project grid */
 .projects-grid {
   display: grid; gap: 1.25rem;
@@ -160,4 +193,84 @@
   font-size: 0.9375rem; font-weight: 600;
   color: #fff; border: none; cursor: pointer;
   background: linear-gradient(135deg, #6c63ff, #5b54e8);
+}
+
+.dashboard-confirm {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 120;
+  padding: 1rem;
+}
+
+.dashboard-confirm__modal {
+  width: 100%;
+  max-width: 26rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: #0f1220;
+  box-shadow: 0 20px 48px rgba(0,0,0,0.45);
+  padding: 1.1rem;
+}
+
+.dashboard-confirm__title {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #f5f6ff;
+  margin: 0 0 0.5rem;
+}
+
+.dashboard-confirm__message {
+  margin: 0;
+  color: #a7acc3;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.dashboard-confirm__actions {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.55rem;
+}
+
+.dashboard-confirm__btn {
+  border: none;
+  border-radius: 0.62rem;
+  padding: 0.54rem 0.95rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.dashboard-confirm__btn--cancel {
+  background: rgba(255,255,255,0.08);
+  color: #d1d5db;
+}
+
+.dashboard-confirm__btn--cancel:hover {
+  background: rgba(255,255,255,0.14);
+}
+
+.dashboard-confirm__btn--primary {
+  background: linear-gradient(135deg, #6c63ff, #5b54e8);
+  color: #fff;
+}
+
+.dashboard-confirm__btn--primary:hover {
+  filter: brightness(1.06);
+}
+
+.dashboard-confirm__btn--danger {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #fff;
+}
+
+.dashboard-confirm__btn--danger:hover {
+  filter: brightness(1.06);
 }

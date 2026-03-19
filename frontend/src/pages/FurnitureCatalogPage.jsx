@@ -362,7 +362,9 @@ export default function FurnitureCatalogPage() {
                     <div className="catalog-card__meta">
                       <div className="catalog-card__rating">
                         <StarRating rating={item.rating || 4.5} />
-                        <span className="catalog-card__review-count">({item.reviews||0})</span>
+                        {Number(item.reviews) > 0 && (
+                          <span className="catalog-card__review-count">({item.reviews})</span>
+                        )}
                       </div>
                       {item.colors && (
                         <div className="catalog-card__colors">
@@ -393,7 +395,9 @@ export default function FurnitureCatalogPage() {
                     </div>
                     <div className="catalog-list-row__rating-row">
                       <StarRating rating={item.rating || 4.5} size={11} className="catalog-list-row__stars" />
-                      <span className="catalog-list-row__reviews">({item.reviews||0})</span>
+                      {Number(item.reviews) > 0 && (
+                        <span className="catalog-list-row__reviews">({item.reviews})</span>
+                      )}
                       <span className="catalog-list-row__dims">· {item.width}×{item.depth}cm</span>
                     </div>
                     <span className="catalog-list-row__cat">{item.category}</span>
@@ -427,7 +431,9 @@ export default function FurnitureCatalogPage() {
                   <div className="catalog-modal__title">{selectedItem.name}</div>
                   <div className="catalog-modal__rating-row">
                     <StarRating rating={selectedItem.rating || 4.5} className="catalog-modal__stars" />
-                    <span className="catalog-modal__reviews">{selectedItem.reviews||0} reviews</span>
+                    {Number(selectedItem.reviews) > 0 && (
+                      <span className="catalog-modal__reviews">{selectedItem.reviews} reviews</span>
+                    )}
                     <span className="catalog-modal__cat-badge">{selectedItem.category}</span>
                   </div>
                 </div>

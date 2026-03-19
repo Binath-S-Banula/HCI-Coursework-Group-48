@@ -15,16 +15,9 @@ const features = [
   { Icon:Share2,      title:'Export & Share',          desc:'PDF floor plans, shopping lists, and a public share link.' },
 ]
 
-const stats = [
-  { value:'4M+',  label:'Designs Created' },
-  { value:'120+', label:'Countries' },
-  { value:'10K+', label:'Furniture Items' },
-  { value:'98%',  label:'Satisfaction' },
-]
-
 const steps = [
   { step:'01', title:'Draw your floor plan', desc:'Use our intuitive 2D editor to draw walls, add rooms and define your space.', color:'#6c63ff' },
-  { step:'02', title:'Add furniture & style', desc:'Browse 10,000+ items and drag them into your plan. Apply textures and colors.', color:'#43d9ad' },
+  { step:'02', title:'Add furniture & style', desc:'Browse items and drag them into your plan. Apply textures and colors.', color:'#43d9ad' },
   { step:'03', title:'See it in 3D', desc:'Switch to 3D view instantly and walk through your dream home in real time.', color:'#ff6b6b' },
 ]
 
@@ -102,18 +95,6 @@ export default function HomePage() {
           ) : (
             <div className="hp-room hp-room--fallback" />
           )}
-        </div>
-      </section>
-
-      {/* ── STATS ── */}
-      <section className="hp-stats">
-        <div className="hp-stats__grid">
-          {stats.map(s => (
-            <div key={s.label} className="hp-stat">
-              <div className="hp-stat__value">{s.value}</div>
-              <div className="hp-stat__label">{s.label}</div>
-            </div>
-          ))}
         </div>
       </section>
 

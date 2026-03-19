@@ -110,16 +110,6 @@ export default function GalleryPage() {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="gallery-stats">
-        {[['4M+','Designs'],['120+','Countries'],['10K+','Items'],['98%','Satisfaction']].map(([v,l]) => (
-          <div key={l} className="gallery-stat">
-            <div className="gallery-stat__value">{v}</div>
-            <div className="gallery-stat__label">{l}</div>
-          </div>
-        ))}
-      </div>
-
       {/* Main */}
       <div className="gallery-main">
 
