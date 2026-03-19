@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
+import toast from 'react-hot-toast'
 import {
   Grid3X3,
   Box,
@@ -48,6 +49,15 @@ export default function AdminPage() {
   const [model3dFile, setModel3dFile] = useState(null)
   const [model3dName, setModel3dName] = useState('')
   const [editingId, setEditingId] = useState(null)
+  const [confirming, setConfirming] = useState(false)
+  const [confirmModal, setConfirmModal] = useState({
+    open: false,
+    title: '',
+    message: '',
+    confirmText: 'Confirm',
+    tone: 'danger',
+    onConfirm: null,
+  })
   const [msg,     setMsg]     = useState(null)
   const isEditing = Boolean(editingId)
 
@@ -62,6 +72,30 @@ export default function AdminPage() {
     setTimeout(() => setMsg(null), 2500)
   }
   const readFile = (file, cb) => { const r = new FileReader(); r.onload = (e) => cb(e.target.result); r.readAsDataURL(file) }
+
+  const openConfirm = ({ title, message, confirmText, tone = 'danger', onConfirm }) => {
+    setConfirming(false)
+    setConfirmModal({
+      open: true,
+      title,
+      message,
+      confirmText,
+      tone,
+      onConfirm,
+    })
+  }
+
+  const closeConfirm = () => {
+    if (confirming) return
+    setConfirmModal({ open: false, title: '', message: '', confirmText: 'Confirm', tone: 'danger', onConfirm: null })
+  }
+
+  const executeConfirmedAction = async () => {
+    if (!confirmModal.onConfirm || confirming) return
+    setConfirming(true)
+    await confirmModal.onConfirm()
+    setConfirming(false)
+  }
 
   const resetFurnitureForm = () => {
     setPreview(null)
@@ -165,10 +199,23 @@ export default function AdminPage() {
       await furnitureService.delete(id)
       setStore((prev) => ({ ...prev, furniture: prev.furniture.filter((i) => i.id !== id) }))
       if (editingId === id) resetFurnitureForm()
-      flash('Furniture removed')
+      toast.success('Furniture deleted successfully')
+      closeConfirm()
     } catch {
       flash('Failed to remove furniture', 'error')
     }
+  }
+
+  const requestDeleteFurniture = (item) => {
+    openConfirm({
+      title: 'Delete Furniture',
+      message: <>
+        Are you sure you want to delete <span style={{ color: '#e8e8f0', fontWeight: 700 }}>{item?.name}</span>? This action cannot be undone.
+      </>,
+      confirmText: 'Delete',
+      tone: 'danger',
+      onConfirm: () => del(item.id),
+    })
   }
   const handleLogout = () => { dispatch(logout()); navigate('/admin/login') }
 
@@ -179,20 +226,49 @@ export default function AdminPage() {
         ...prev,
         projects: prev.projects.map((p) => (p._id === project._id ? updated : p)),
       }))
-      flash(updated.isPublic ? 'Design is now public' : 'Design removed from gallery')
+      toast.success(updated.isPublic ? 'Project published successfully' : 'Project unpublished successfully')
+      closeConfirm()
     } catch {
       flash('Failed to update design visibility', 'error')
     }
+  }
+
+  const requestToggleProjectVisibility = (project) => {
+    const isPublishing = !project.isPublic
+    openConfirm({
+      title: isPublishing ? 'Publish Project' : 'Unpublish Project',
+      message: <>
+        {isPublishing
+          ? <>Are you sure you want to publish <span style={{ color: '#e8e8f0', fontWeight: 700 }}>{project?.name}</span> to the gallery?</>
+          : <>Are you sure you want to unpublish <span style={{ color: '#e8e8f0', fontWeight: 700 }}>{project?.name}</span> from the gallery?</>}
+      </>,
+      confirmText: isPublishing ? 'Publish' : 'Unpublish',
+      tone: 'primary',
+      onConfirm: () => toggleProjectVisibility(project),
+    })
   }
 
   const deleteProject = async (id) => {
     try {
       await projectService.adminDelete(id)
       setStore((prev) => ({ ...prev, projects: prev.projects.filter((p) => p._id !== id) }))
-      flash('Design deleted')
+      toast.success('Project deleted successfully')
+      closeConfirm()
     } catch {
       flash('Failed to delete design', 'error')
     }
+  }
+
+  const requestDeleteProject = (project) => {
+    openConfirm({
+      title: 'Delete Project',
+      message: <>
+        Are you sure you want to delete <span style={{ color: '#e8e8f0', fontWeight: 700 }}>{project?.name}</span>? This action cannot be undone.
+      </>,
+      confirmText: 'Delete',
+      tone: 'danger',
+      onConfirm: () => deleteProject(project._id),
+    })
   }
 
   const Flash = () => !msg ? null : (
@@ -221,7 +297,7 @@ export default function AdminPage() {
       </div>
       <div className="admin-item-card__actions">
         <button className="admin-item-card__edit" onClick={() => editFurniture(item)}><Pencil size={10} /></button>
-        <button className="admin-item-card__delete" onClick={() => del(item.id)}><X size={10} /></button>
+        <button className="admin-item-card__delete" onClick={() => requestDeleteFurniture(item)}><X size={10} /></button>
       </div>
     </div>
   )
@@ -394,11 +470,11 @@ export default function AdminPage() {
               <div className="admin-project-row__actions">
                 <button
                   className={`admin-project-btn ${project.isPublic ? 'admin-project-btn--muted' : 'admin-project-btn--green'}`}
-                  onClick={() => toggleProjectVisibility(project)}
+                  onClick={() => requestToggleProjectVisibility(project)}
                 >
                   <Globe size={12} /> {project.isPublic ? 'Unpublish' : 'Publish'}
                 </button>
-                <button className="admin-project-btn admin-project-btn--danger" onClick={() => deleteProject(project._id)}>
+                <button className="admin-project-btn admin-project-btn--danger" onClick={() => requestDeleteProject(project)}>
                   <Trash2 size={12} /> Delete
                 </button>
               </div>
@@ -464,6 +540,28 @@ export default function AdminPage() {
           {page==='furniture' && FurnitureView()}
           {page==='designs' && DesignsView()}
         </main>
+
+        {confirmModal.open && (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 1201, background: 'rgba(5,5,12,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} role="dialog" aria-modal="true">
+            <div style={{ width: '100%', maxWidth: 340, borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)', background: '#181829', padding: 14 }}>
+              <div style={{ color: '#f1f1f7', fontWeight: 700, fontSize: 14 }}>{confirmModal.title}</div>
+              <div style={{ marginTop: 8, color: '#9a9ab0', fontSize: 12, lineHeight: 1.4 }}>{confirmModal.message}</div>
+              <div style={{ marginTop: 14, display: 'flex', gap: 8 }}>
+                <button onClick={closeConfirm} disabled={confirming} style={{ flex: 1, borderRadius: 8, border: '1px solid rgba(255,255,255,0.16)', background: 'transparent', color: '#888', fontWeight: 600, fontSize: 12, padding: '8px 10px', cursor: confirming ? 'default' : 'pointer' }}>Cancel</button>
+                <button
+                  onClick={executeConfirmedAction}
+                  disabled={confirming}
+                  style={confirmModal.tone === 'danger'
+                    ? { flex: 1, borderRadius: 8, border: '1px solid rgba(255,107,107,0.45)', background: 'rgba(255,107,107,0.16)', color: '#ff8d8d', fontWeight: 700, fontSize: 12, padding: '8px 10px', cursor: confirming ? 'default' : 'pointer', opacity: confirming ? 0.6 : 1 }
+                    : { flex: 1, borderRadius: 8, border: '1px solid rgba(108,99,255,0.45)', background: 'rgba(108,99,255,0.2)', color: '#c8c4ff', fontWeight: 700, fontSize: 12, padding: '8px 10px', cursor: confirming ? 'default' : 'pointer', opacity: confirming ? 0.6 : 1 }
+                  }
+                >
+                  {confirming ? 'Processing...' : confirmModal.confirmText}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
