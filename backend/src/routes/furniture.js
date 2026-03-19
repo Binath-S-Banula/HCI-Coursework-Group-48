@@ -1,6 +1,6 @@
 const router  = require('express').Router()
 const ctrl    = require('../controllers/furniture.controller')
-const { protect, adminOnly } = require('../middleware/auth.middleware')
+const { protect } = require('../middleware/auth.middleware')
 const { upload } = require('../middleware/upload.middleware')
 
 const attachUploadedFurnitureFiles = (req) => {
@@ -21,8 +21,8 @@ const attachUploadedFurnitureFiles = (req) => {
 router.get('/',    ctrl.getAll)
 router.get('/:id', ctrl.getOne)
 
-// Admin: create with image + 3d model upload
-router.post('/', protect, adminOnly, upload.fields([
+// Authenticated users: create with image + 3d model upload
+router.post('/', protect, upload.fields([
   { name: 'image', maxCount: 1 },
   { name: 'model3dFile', maxCount: 1 },
 ]), async (req, res, next) => {
@@ -38,7 +38,7 @@ router.post('/', protect, adminOnly, upload.fields([
   } catch (err) { next(err) }
 })
 
-router.put   ('/:id', protect, adminOnly, upload.fields([
+router.put   ('/:id', protect, upload.fields([
   { name: 'image', maxCount: 1 },
   { name: 'model3dFile', maxCount: 1 },
 ]), async (req, res, next) => {
@@ -47,6 +47,6 @@ router.put   ('/:id', protect, adminOnly, upload.fields([
     ctrl.update(req, res, next)
   } catch (err) { next(err) }
 })
-router.delete('/:id', protect, adminOnly, ctrl.remove)
+router.delete('/:id', protect, ctrl.remove)
 
 module.exports = router

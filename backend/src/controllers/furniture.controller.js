@@ -1,4 +1,6 @@
 const Furniture = require("../models/Furniture");
+const User = require("../models/User");
+const { verifyToken } = require("../utils/jwt");
 const path = require("path");
 const fs = require("fs");
 
@@ -53,14 +55,70 @@ const deleteUploadedFileByUrl = async (fileUrl) => {
   }
 };
 
+const getRequestUser = async (req) => {
+  if (req.userId) {
+    const user = await User.findById(req.userId).select("_id role");
+    if (!user) return null;
+    return { id: String(user._id), role: user.role };
+  }
+
+  const header = req.headers?.authorization;
+  if (!header || !header.startsWith("Bearer ")) return null;
+
+  try {
+    const token = header.split(" ")[1];
+    const decoded = verifyToken(token);
+    const user = await User.findById(decoded.id).select("_id role");
+    if (!user) return null;
+    return { id: String(user._id), role: user.role };
+  } catch {
+    return null;
+  }
+};
+
+const canManageFurniture = (requestUser, furniture) => {
+  if (!requestUser || !furniture) return false;
+  if (requestUser.role === "admin") return true;
+  return String(furniture.uploadedBy || "") === requestUser.id;
+};
+
 // GET /api/furniture  — all clients can fetch
 const getAll = async (req, res, next) => {
   try {
-    const { category, search, featured, page = 1, limit = 50 } = req.query;
+    const {
+      category,
+      search,
+      featured,
+      includeMine,
+      page = 1,
+      limit = 50,
+    } = req.query;
     const filter = { isActive: true };
     if (category) filter.category = category;
     if (featured) filter.isFeatured = true;
     if (search) filter.$text = { $search: search };
+
+    const shouldIncludeMine =
+      String(includeMine || "").toLowerCase() === "true" ||
+      String(includeMine || "") === "1";
+
+    const publicVisibilityFilter = {
+      $or: [{ visibility: "public" }, { visibility: { $exists: false } }],
+    };
+
+    if (shouldIncludeMine) {
+      const requestUser = await getRequestUser(req);
+      if (requestUser?.id) {
+        filter.$or = [
+          ...publicVisibilityFilter.$or,
+          { uploadedBy: requestUser.id },
+        ];
+      } else {
+        filter.$or = publicVisibilityFilter.$or;
+      }
+    } else {
+      filter.$or = publicVisibilityFilter.$or;
+    }
 
     const items = await Furniture.find(filter)
       .sort({ createdAt: -1 })
@@ -81,13 +139,22 @@ const getOne = async (req, res, next) => {
     const item = await Furniture.findById(req.params.id);
     if (!item)
       return res.status(404).json({ success: false, message: "Not found" });
+
+    if (item.visibility === "private") {
+      const requestUser = await getRequestUser(req);
+      const canAccess = canManageFurniture(requestUser, item);
+      if (!canAccess) {
+        return res.status(403).json({ success: false, message: "Not allowed" });
+      }
+    }
+
     res.json({ success: true, data: item });
   } catch (err) {
     next(err);
   }
 };
 
-// POST /api/furniture  — admin only
+// POST /api/furniture  — authenticated users can create
 const create = async (req, res, next) => {
   try {
     const {
@@ -111,7 +178,14 @@ const create = async (req, res, next) => {
           message: "name, category and imageUrl are required",
         });
 
-    const defaults = CATEGORY_DEFAULT_DIMENSIONS_CM[category] || CATEGORY_DEFAULT_DIMENSIONS_CM.other;
+    const requestUser = await getRequestUser(req);
+    if (!requestUser?.id) {
+      return res.status(401).json({ success: false, message: "Not authenticated" });
+    }
+
+    const defaults =
+      CATEGORY_DEFAULT_DIMENSIONS_CM[category] ||
+      CATEGORY_DEFAULT_DIMENSIONS_CM.other;
 
     const item = await Furniture.create({
       name,
@@ -124,8 +198,9 @@ const create = async (req, res, next) => {
       model3d,
       model3dName,
       tags,
-      isFeatured,
-      uploadedBy: req.userId,
+      isFeatured: requestUser.role === "admin" ? Boolean(isFeatured) : false,
+      visibility: requestUser.role === "admin" ? "public" : "private",
+      uploadedBy: requestUser.id,
     });
     res.status(201).json({ success: true, data: item });
   } catch (err) {
@@ -133,14 +208,30 @@ const create = async (req, res, next) => {
   }
 };
 
-// PUT /api/furniture/:id  — admin only
+// PUT /api/furniture/:id  — owner or admin
 const update = async (req, res, next) => {
   try {
+    const requestUser = await getRequestUser(req);
+    if (!requestUser?.id) {
+      return res.status(401).json({ success: false, message: "Not authenticated" });
+    }
+
     const existing = await Furniture.findById(req.params.id);
     if (!existing)
       return res.status(404).json({ success: false, message: "Not found" });
 
+    if (!canManageFurniture(requestUser, existing)) {
+      return res.status(403).json({ success: false, message: "Not allowed" });
+    }
+
     const updates = { ...req.body };
+
+    if (requestUser.role !== "admin") {
+      delete updates.visibility;
+      delete updates.isFeatured;
+      delete updates.isActive;
+      delete updates.uploadedBy;
+    }
 
     if (req.uploadedImageUrl) {
       updates.imageUrl = req.uploadedImageUrl;
@@ -170,12 +261,21 @@ const update = async (req, res, next) => {
   }
 };
 
-// DELETE /api/furniture/:id  — admin only
+// DELETE /api/furniture/:id  — owner or admin
 const remove = async (req, res, next) => {
   try {
+    const requestUser = await getRequestUser(req);
+    if (!requestUser?.id) {
+      return res.status(401).json({ success: false, message: "Not authenticated" });
+    }
+
     const item = await Furniture.findById(req.params.id);
     if (!item)
       return res.status(404).json({ success: false, message: "Not found" });
+
+    if (!canManageFurniture(requestUser, item)) {
+      return res.status(403).json({ success: false, message: "Not allowed" });
+    }
 
     await Promise.all([
       deleteUploadedFileByUrl(item.imageUrl),

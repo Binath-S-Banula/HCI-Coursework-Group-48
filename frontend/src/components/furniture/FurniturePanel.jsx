@@ -2,10 +2,11 @@ import React, { useState, useRef, useCallback, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { setCategory } from '../../store/slices/furnitureSlice'
 import { furnitureService } from '../../services/furniture.service'
-import { Armchair } from 'lucide-react'
+import { Armchair, Box, CheckCircle2, Circle, Image as ImageIcon, Pencil, Plus, Trash2, X } from 'lucide-react'
 
 const CATS = [
   { id: 'all',      label: 'All'     },
+  { id: 'my',       label: 'My'      },
   { id: 'sofa',     label: 'Sofa'    },
   { id: 'chair',    label: 'Chair'   },
   { id: 'table',    label: 'Table'   },
@@ -54,9 +55,25 @@ const normalizeSize = (value, fallback) => {
 }
 
 const ITEMS = []
+const MAX_MODEL_FILE_SIZE = 100 * 1024 * 1024
+
+const emptyForm = {
+  name: '',
+  category: 'sofa',
+  width: '',
+  depth: '',
+}
+
+const readAsDataUrl = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (event) => resolve(event.target?.result)
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
 
 // Single item card — always same fixed size
-function FurnitureCard({ item, dispatch_drag }) {
+function FurnitureCard({ item, onEdit, onDelete }) {
   const [imgFailed, setImgFailed] = useState(false)
   const icon = ICONS[item.cat] || ICONS.default
   const showImage = item.image && !imgFailed
@@ -112,12 +129,67 @@ function FurnitureCard({ item, dispatch_drag }) {
 
       {/* Label — fixed, no grow */}
       <div style={{ padding: '5px 8px 7px', background: 'rgba(0,0,0,0.2)', flexShrink: 0 }}>
-        <div style={{ fontSize: 11, fontWeight: 600, color: '#ccc', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {item.name}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: '#ccc', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+            {item.name}
+          </div>
+          {item.isMine && (
+            <span style={{ fontSize: 8, fontWeight: 700, color: '#43d9ad', border: '1px solid rgba(67,217,173,0.5)', borderRadius: 4, padding: '1px 4px', textTransform: 'uppercase', letterSpacing: '.04em' }}>
+              My
+            </span>
+          )}
         </div>
         <div style={{ fontSize: 9, color: '#4a4a6a', marginTop: 2 }}>
           {item.w}×{item.d} cm
         </div>
+        {item.isMine && (
+          <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+            <button
+              onClick={(event) => {
+                event.stopPropagation()
+                onEdit(item)
+              }}
+              style={{
+                flex: 1,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 4,
+                fontSize: 10,
+                color: '#9b95ff',
+                background: 'rgba(108,99,255,0.12)',
+                border: '1px solid rgba(108,99,255,0.35)',
+                borderRadius: 6,
+                padding: '4px 6px',
+                cursor: 'pointer',
+              }}
+            >
+              <Pencil size={10} /> Edit
+            </button>
+            <button
+              onClick={(event) => {
+                event.stopPropagation()
+                onDelete(item)
+              }}
+              style={{
+                flex: 1,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 4,
+                fontSize: 10,
+                color: '#ff6b6b',
+                background: 'rgba(255,107,107,0.08)',
+                border: '1px solid rgba(255,107,107,0.35)',
+                borderRadius: 6,
+                padding: '4px 6px',
+                cursor: 'pointer',
+              }}
+            >
+              <Trash2 size={10} /> Delete
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -126,8 +198,22 @@ function FurnitureCard({ item, dispatch_drag }) {
 export default function FurniturePanel() {
   const dispatch = useDispatch()
   const { activeCategory } = useSelector(s => s.furniture)
+  const { user } = useSelector(s => s.auth)
   const [items, setItems] = useState([])
   const [width,    setWidth]    = useState(260)
+  const [isFormOpen, setIsFormOpen] = useState(false)
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+  const [editingItem, setEditingItem] = useState(null)
+  const [pendingDelete, setPendingDelete] = useState(null)
+  const [form, setForm] = useState(emptyForm)
+  const [preview, setPreview] = useState(null)
+  const [imageFile, setImageFile] = useState(null)
+  const [model3dFile, setModel3dFile] = useState(null)
+  const [model3dName, setModel3dName] = useState('')
+  const [statusText, setStatusText] = useState('')
+  const [statusType, setStatusType] = useState('success')
+  const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const isResizing = useRef(false)
   const startX     = useRef(0)
   const startW     = useRef(0)
@@ -151,35 +237,164 @@ export default function FurniturePanel() {
     e.preventDefault()
   }, [width])
 
+  const flash = useCallback((text, type = 'success') => {
+    setStatusText(text)
+    setStatusType(type)
+    window.clearTimeout(window.__furniturePanelFlashTimer)
+    window.__furniturePanelFlashTimer = window.setTimeout(() => {
+      setStatusText('')
+    }, 2800)
+  }, [])
+
+  const resetForm = useCallback(() => {
+    setForm(emptyForm)
+    setEditingItem(null)
+    setPreview(null)
+    setImageFile(null)
+    setModel3dFile(null)
+    setModel3dName('')
+  }, [])
+
+  const closeFormModal = useCallback(() => {
+    setIsFormOpen(false)
+    resetForm()
+  }, [resetForm])
+
+  const loadFurniture = useCallback(async () => {
+    try {
+      const res = await furnitureService.getAll({ limit: 500, includeMine: true })
+      const userId = String(user?._id || '')
+      const mapped = (res.data || []).map((f) => {
+        const defaults = getDefaultSizeByCategory(f.category)
+        const ownerId = typeof f.uploadedBy === 'string' ? f.uploadedBy : String(f.uploadedBy?._id || '')
+        const isMine = Boolean(userId && ownerId && ownerId === userId && f.visibility === 'private')
+        return {
+          id: f._id,
+          name: f.name,
+          cat: f.category,
+          w: normalizeSize(f.width, defaults.w),
+          d: normalizeSize(f.depth, defaults.d),
+          image: f.imageUrl,
+          model3d: f.model3d || null,
+          model3dName: f.model3dName || '',
+          isMine,
+        }
+      })
+      setItems(mapped)
+    } catch {
+      setItems([])
+      flash('Failed to load furniture', 'error')
+    }
+  }, [flash, user?._id])
+
   useEffect(() => {
-    const loadFurniture = async () => {
-      try {
-        const res = await furnitureService.getAll({ limit: 500 })
-        const mapped = (res.data || []).map((f) => {
-          const defaults = getDefaultSizeByCategory(f.category)
-          return {
-            id: f._id,
-            name: f.name,
-            cat: f.category,
-            w: normalizeSize(f.width, defaults.w),
-            d: normalizeSize(f.depth, defaults.d),
-            image: f.imageUrl,
-            model3d: f.model3d || null,
-            isAdmin: true,
-          }
-        })
-        setItems(mapped)
-      } catch {
-        setItems([])
-      }
+    loadFurniture()
+  }, [loadFurniture])
+
+  useEffect(() => {
+    return () => {
+      window.clearTimeout(window.__furniturePanelFlashTimer)
+    }
+  }, [])
+
+  const openAddModal = () => {
+    resetForm()
+    setIsFormOpen(true)
+  }
+
+  const openEditModal = (item) => {
+    setEditingItem(item)
+    setForm({
+      name: item.name || '',
+      category: item.cat || 'sofa',
+      width: String(item.w ?? ''),
+      depth: String(item.d ?? ''),
+    })
+    setPreview(item.image || null)
+    setImageFile(null)
+    setModel3dFile(null)
+    setModel3dName(item.model3dName || '')
+    setIsFormOpen(true)
+  }
+
+  const openDeleteModal = (item) => {
+    setPendingDelete(item)
+    setIsDeleteOpen(true)
+  }
+
+  const saveFurniture = async () => {
+    if (!form.name.trim()) {
+      flash('Please enter furniture name', 'error')
+      return
     }
 
-    loadFurniture()
-  }, [])
+    const isEditing = Boolean(editingItem)
+    if (!isEditing && !imageFile) {
+      flash('Please upload a 2D furniture image', 'error')
+      return
+    }
+
+    if (!isEditing && !model3dFile) {
+      flash('Please upload a 3D model (.glb or .gltf)', 'error')
+      return
+    }
+
+    if (model3dFile && model3dFile.size > MAX_MODEL_FILE_SIZE) {
+      flash('3D model file must be 100MB or smaller', 'error')
+      return
+    }
+
+    try {
+      setSaving(true)
+      const payload = new FormData()
+      payload.append('name', form.name.trim())
+      payload.append('category', form.category)
+      payload.append('price', '0')
+      payload.append('width', String(Number(form.width) || 80))
+      payload.append('depth', String(Number(form.depth) || 80))
+      if (imageFile) payload.append('image', imageFile)
+      if (model3dFile) {
+        payload.append('model3dFile', model3dFile)
+        payload.append('model3dName', model3dName)
+      }
+
+      if (isEditing) {
+        await furnitureService.update(editingItem.id, payload)
+        flash('Furniture updated')
+      } else {
+        await furnitureService.create(payload)
+        flash('Furniture added')
+      }
+
+      closeFormModal()
+      await loadFurniture()
+    } catch (err) {
+      flash(err?.response?.data?.message || (editingItem ? 'Failed to update furniture' : 'Failed to add furniture'), 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const confirmDelete = async () => {
+    if (!pendingDelete) return
+    try {
+      setDeleting(true)
+      await furnitureService.delete(pendingDelete.id)
+      flash('Furniture deleted')
+      setIsDeleteOpen(false)
+      setPendingDelete(null)
+      await loadFurniture()
+    } catch (err) {
+      flash(err?.response?.data?.message || 'Failed to delete furniture', 'error')
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   const allItems = [...items, ...ITEMS]
   const filtered = allItems.filter((f) => {
     if (!activeCategory || activeCategory === 'all') return true
+    if (activeCategory === 'my') return f.isMine
     return f.cat === activeCategory
   })
 
@@ -199,6 +414,11 @@ export default function FurniturePanel() {
         <div style={{ fontWeight: 700, fontSize: 13, color: '#e8e8f0', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
           <Armchair size={14} /> Furniture
         </div>
+        {statusText && (
+          <div style={{ marginTop: 8, fontSize: 11, color: statusType === 'error' ? '#ff6b6b' : '#43d9ad' }}>
+            {statusText}
+          </div>
+        )}
       </div>
 
       {/* Category pills */}
@@ -217,7 +437,7 @@ export default function FurniturePanel() {
       {/* Items grid — scrollable */}
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', padding: 10, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, alignContent: 'start' }}>
         {filtered.map(item => (
-          <FurnitureCard key={item.id} item={item} />
+          <FurnitureCard key={item.id} item={item} onEdit={openEditModal} onDelete={openDeleteModal} />
         ))}
         {filtered.length === 0 && (
           <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: 24, color: '#444', fontSize: 11 }}>No items found</div>
@@ -225,9 +445,169 @@ export default function FurniturePanel() {
       </div>
 
       {/* Footer */}
-      <div style={{ padding: '7px 12px', borderTop: '1px solid rgba(255,255,255,0.06)', fontSize: 10, color: '#3a3a5a', textAlign: 'center', flexShrink: 0 }}>
-        Drag items onto canvas • drag left edge to resize
+      <div style={{ padding: '9px 12px', borderTop: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
+        <button
+          onClick={openAddModal}
+          style={{
+            width: '100%',
+            borderRadius: 8,
+            border: '1px solid rgba(108,99,255,0.45)',
+            background: 'rgba(108,99,255,0.18)',
+            color: '#c8c4ff',
+            fontWeight: 700,
+            fontSize: 12,
+            padding: '9px 10px',
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 6,
+          }}
+        >
+          <Plus size={14} /> Add Furniture
+        </button>
+        <div style={{ marginTop: 8, fontSize: 10, color: '#3a3a5a', textAlign: 'center' }}>
+          Drag items onto canvas • drag left edge to resize
+        </div>
       </div>
+
+      {isFormOpen && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1200, background: 'rgba(5,5,12,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} role="dialog" aria-modal="true">
+          <div style={{ width: '100%', maxWidth: 420, maxHeight: '100%', overflowY: 'auto', borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)', background: '#181829', padding: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <div style={{ color: '#e8e8f0', fontWeight: 700, fontSize: 14 }}>{editingItem ? 'Edit My Furniture' : 'Add My Furniture'}</div>
+              <button onClick={closeFormModal} style={{ width: 24, height: 24, borderRadius: 6, border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', color: '#777', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><X size={14} /></button>
+            </div>
+
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 10, color: preview ? '#43d9ad' : '#9b95ff', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.08em', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                <span style={{ width: 16, height: 16, borderRadius: '50%', background: preview ? '#43d9ad' : 'rgba(108,99,255,0.5)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 9 }}>{preview ? <CheckCircle2 size={10} /> : '1'}</span>
+                2D Image ({editingItem ? 'optional' : 'required'})
+              </div>
+              <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', borderRadius: 10, border: `1px dashed ${preview ? 'rgba(67,217,173,0.6)' : 'rgba(255,255,255,0.15)'}`, background: preview ? 'rgba(67,217,173,0.08)' : 'rgba(255,255,255,0.03)', minHeight: 90, cursor: 'pointer', overflow: 'hidden' }}>
+                {preview ? (
+                  <img src={preview} alt="Furniture preview" style={{ width: '100%', height: 90, objectFit: 'contain' }} />
+                ) : (
+                  <>
+                    <ImageIcon size={20} color="#666" />
+                    <span style={{ marginTop: 6, fontSize: 11, color: '#777' }}>Upload image (.png / .jpg)</span>
+                  </>
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  onChange={async (event) => {
+                    const file = event.target.files?.[0]
+                    if (!file) return
+                    setImageFile(file)
+                    const nextPreview = await readAsDataUrl(file)
+                    setPreview(nextPreview)
+                    event.target.value = ''
+                  }}
+                />
+              </label>
+              {preview && (
+                <button onClick={() => { setPreview(null); setImageFile(null) }} style={{ marginTop: 5, fontSize: 10, border: 'none', background: 'none', color: '#ff6b6b', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <X size={12} /> Remove image
+                </button>
+              )}
+            </div>
+
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 10, color: model3dFile ? '#43d9ad' : '#9b95ff', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.08em', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                <span style={{ width: 16, height: 16, borderRadius: '50%', background: model3dFile ? '#43d9ad' : 'rgba(108,99,255,0.5)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 9 }}>{model3dFile ? <CheckCircle2 size={10} /> : '2'}</span>
+                3D Model ({editingItem ? 'optional' : 'required'})
+              </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, borderRadius: 10, border: `1px solid ${model3dFile ? 'rgba(67,217,173,0.5)' : 'rgba(255,255,255,0.12)'}`, background: model3dFile ? 'rgba(67,217,173,0.07)' : 'rgba(255,255,255,0.03)', padding: '10px 10px', cursor: 'pointer' }}>
+                <Box size={18} color="#888" />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 11, color: model3dFile ? '#43d9ad' : '#777', fontWeight: 600 }}>{model3dName || 'Upload .glb or .gltf'}</div>
+                  <div style={{ fontSize: 10, color: '#444', marginTop: 1 }}>Max 100MB</div>
+                </div>
+                {model3dFile && <span style={{ fontSize: 10, color: '#43d9ad' }}>Ready</span>}
+                <input
+                  type="file"
+                  accept=".glb,.gltf"
+                  style={{ display: 'none' }}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0]
+                    if (!file) return
+                    if (file.size > MAX_MODEL_FILE_SIZE) {
+                      flash('3D model file must be 100MB or smaller', 'error')
+                      event.target.value = ''
+                      return
+                    }
+                    setModel3dFile(file)
+                    setModel3dName(file.name)
+                    event.target.value = ''
+                  }}
+                />
+              </label>
+              {!!model3dFile && (
+                <button onClick={() => { setModel3dFile(null); setModel3dName('') }} style={{ marginTop: 5, fontSize: 10, border: 'none', background: 'none', color: '#ff6b6b', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <X size={12} /> Remove model
+                </button>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: 6, marginBottom: 10, padding: '8px 9px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)' }}>
+              <span style={{ fontSize: 10, color: preview ? '#43d9ad' : '#555', display: 'inline-flex', alignItems: 'center', gap: 4 }}>{preview ? <CheckCircle2 size={10} /> : <Circle size={10} />} 2D</span>
+              <span style={{ fontSize: 10, color: model3dFile ? '#43d9ad' : '#555', display: 'inline-flex', alignItems: 'center', gap: 4 }}>{model3dFile ? <CheckCircle2 size={10} /> : <Circle size={10} />} 3D</span>
+              <span style={{ fontSize: 10, color: form.name ? '#43d9ad' : '#555', display: 'inline-flex', alignItems: 'center', gap: 4 }}>{form.name ? <CheckCircle2 size={10} /> : <Circle size={10} />} Name</span>
+            </div>
+
+            <div style={{ display: 'grid', gap: 8 }}>
+              <label style={{ fontSize: 11, color: '#9b95ff', fontWeight: 600 }}>
+                Name
+                <input value={form.name} onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))} placeholder="e.g. Reading Chair" style={{ width: '100%', marginTop: 4, borderRadius: 8, border: '1px solid rgba(255,255,255,0.12)', background: '#10101a', color: '#ddd', padding: '8px 9px', fontSize: 12 }} />
+              </label>
+              <label style={{ fontSize: 11, color: '#9b95ff', fontWeight: 600 }}>
+                Category
+                <select value={form.category} onChange={(event) => setForm((prev) => ({ ...prev, category: event.target.value }))} style={{ width: '100%', marginTop: 4, borderRadius: 8, border: '1px solid rgba(255,255,255,0.12)', background: '#10101a', color: '#ddd', padding: '8px 9px', fontSize: 12 }}>
+                  {CATS.filter((cat) => cat.id !== 'all' && cat.id !== 'my').map((cat) => (
+                    <option key={cat.id} value={cat.id}>{cat.label}</option>
+                  ))}
+                </select>
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <label style={{ fontSize: 11, color: '#9b95ff', fontWeight: 600 }}>
+                  Width (cm)
+                  <input type="number" value={form.width} onChange={(event) => setForm((prev) => ({ ...prev, width: event.target.value }))} placeholder="80" style={{ width: '100%', marginTop: 4, borderRadius: 8, border: '1px solid rgba(255,255,255,0.12)', background: '#10101a', color: '#ddd', padding: '8px 9px', fontSize: 12 }} />
+                </label>
+                <label style={{ fontSize: 11, color: '#9b95ff', fontWeight: 600 }}>
+                  Depth (cm)
+                  <input type="number" value={form.depth} onChange={(event) => setForm((prev) => ({ ...prev, depth: event.target.value }))} placeholder="80" style={{ width: '100%', marginTop: 4, borderRadius: 8, border: '1px solid rgba(255,255,255,0.12)', background: '#10101a', color: '#ddd', padding: '8px 9px', fontSize: 12 }} />
+                </label>
+              </div>
+            </div>
+
+            <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+              <button onClick={closeFormModal} style={{ flex: 1, borderRadius: 8, border: '1px solid rgba(255,255,255,0.16)', background: 'transparent', color: '#888', fontWeight: 600, fontSize: 12, padding: '8px 10px', cursor: 'pointer' }}>Cancel</button>
+              <button onClick={saveFurniture} disabled={saving} style={{ flex: 1, borderRadius: 8, border: '1px solid rgba(108,99,255,0.45)', background: 'rgba(108,99,255,0.2)', color: '#c8c4ff', fontWeight: 700, fontSize: 12, padding: '8px 10px', cursor: saving ? 'default' : 'pointer', opacity: saving ? 0.6 : 1 }}>
+                {saving ? 'Saving...' : (editingItem ? 'Save Changes' : 'Add Furniture')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isDeleteOpen && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1201, background: 'rgba(5,5,12,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} role="dialog" aria-modal="true">
+          <div style={{ width: '100%', maxWidth: 340, borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)', background: '#181829', padding: 14 }}>
+            <div style={{ color: '#f1f1f7', fontWeight: 700, fontSize: 14 }}>Delete Furniture</div>
+            <div style={{ marginTop: 8, color: '#9a9ab0', fontSize: 12, lineHeight: 1.4 }}>
+              Are you sure you want to delete <span style={{ color: '#e8e8f0', fontWeight: 700 }}>{pendingDelete?.name}</span>? This action cannot be undone.
+            </div>
+            <div style={{ marginTop: 14, display: 'flex', gap: 8 }}>
+              <button onClick={() => { setIsDeleteOpen(false); setPendingDelete(null) }} disabled={deleting} style={{ flex: 1, borderRadius: 8, border: '1px solid rgba(255,255,255,0.16)', background: 'transparent', color: '#888', fontWeight: 600, fontSize: 12, padding: '8px 10px', cursor: deleting ? 'default' : 'pointer' }}>Cancel</button>
+              <button onClick={confirmDelete} disabled={deleting} style={{ flex: 1, borderRadius: 8, border: '1px solid rgba(255,107,107,0.45)', background: 'rgba(255,107,107,0.16)', color: '#ff8d8d', fontWeight: 700, fontSize: 12, padding: '8px 10px', cursor: deleting ? 'default' : 'pointer', opacity: deleting ? 0.6 : 1 }}>
+                {deleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

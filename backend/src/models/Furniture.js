@@ -14,6 +14,7 @@ const furnitureSchema = new mongoose.Schema({
   tags:        [{ type: String }],
   isFeatured:  { type: Boolean, default: false },
   isActive:    { type: Boolean, default: true  },
+  visibility:  { type: String, enum: ['public', 'private'], default: 'public' },
   uploadedBy:  { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
 }, { timestamps: true })
 
