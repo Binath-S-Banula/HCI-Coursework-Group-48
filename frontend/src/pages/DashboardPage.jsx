@@ -7,8 +7,11 @@ import { projectService } from '../services/project.service'
 import '../styles/pages/DashboardPage.css'
 
 const GRID = 10
-const DEFAULT_CANVAS_WIDTH = 900
-const DEFAULT_CANVAS_HEIGHT = 550
+const WORLD_COLS = 50
+const WORLD_ROWS = 50
+const MAJOR = GRID * 10
+const WORLD_WIDTH = WORLD_COLS * MAJOR
+const WORLD_HEIGHT = WORLD_ROWS * MAJOR
 
 const snap = (value) => Math.round(Number(value || 0) / GRID) * GRID
 
@@ -138,8 +141,8 @@ export default function DashboardPage() {
     const defaults = defaultSizeByCategory(pendingItem.category || pendingItem.name)
     const width = Math.max(GRID, snap(normalizeSizeCm(pendingItem.width, defaults.width)))
     const depth = Math.max(GRID, snap(normalizeSizeCm(pendingItem.depth, defaults.depth)))
-    const x = snap((DEFAULT_CANVAS_WIDTH / 2) - (width / 2))
-    const y = snap((DEFAULT_CANVAS_HEIGHT / 2) - (depth / 2))
+    const x = snap((WORLD_WIDTH / 2) - (width / 2))
+    const y = snap((WORLD_HEIGHT / 2) - (depth / 2))
 
     return {
       id: `pf_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
