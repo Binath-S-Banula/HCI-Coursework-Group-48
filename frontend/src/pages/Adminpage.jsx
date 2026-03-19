@@ -13,6 +13,9 @@ import {
   Pencil,
   LogOut,
   Trash2,
+  Search,
+  Eye,
+  EyeOff,
 } from 'lucide-react'
 import { logout } from '../store/slices/authSlice'
 import { furnitureService } from '../services/furniture.service'
@@ -50,6 +53,9 @@ export default function AdminPage() {
   const [model3dName, setModel3dName] = useState('')
   const [editingId, setEditingId] = useState(null)
   const [confirming, setConfirming] = useState(false)
+  const [furnitureSearch, setFurnitureSearch] = useState('')
+  const [designsSearch, setDesignsSearch] = useState('')
+  const [designsFilter, setDesignsFilter] = useState('all')
   const [confirmModal, setConfirmModal] = useState({
     open: false,
     title: '',
@@ -305,23 +311,23 @@ export default function AdminPage() {
   // ── Dashboard ──────────────────────────────────────────────────
   const DashboardView = () => (
     <div>
-      <h2 style={{ fontFamily:'Syne,sans-serif', fontWeight:900, fontSize:'1.375rem', marginBottom:'0.25rem' }}>Dashboard</h2>
-      <p style={{ color:'rgba(255,255,255,0.3)', fontSize:'0.875rem', marginBottom:'2rem' }}>Welcome back, {user?.name}</p>
+      <h2 style={{ fontFamily:'Syne,sans-serif', fontWeight:900, fontSize:'1.75rem', marginBottom:'0.5rem', color:'#e8e8f0' }}>Dashboard</h2>
+      <p style={{ color:'rgba(255,255,255,0.45)', fontSize:'0.9375rem', marginBottom:'2.5rem' }}>Welcome back, <span style={{ fontWeight: 600, color:'#a78bfa' }}>{user?.name}</span></p>
       <div className="admin-stats">
         {[
           { label:'Furniture',     value:store.furniture.length,                           icon: Box,       cls:'text-accent' },
           { label:'Designs',       value:store.projects.length,                            icon: Globe,     cls:'text-teal' },
-          { label:'Shared',        value:store.projects.filter(p => p.isPublic).length,   icon: Globe,     cls:'text-blue' },
+          { label:'Published',     value:store.projects.filter(p => p.isPublic).length,   icon: Globe,     cls:'text-blue' },
         ].map(s => (
           <div key={s.label} className="admin-stat-card">
-            <div className="admin-stat-card__icon"><s.icon size={22} /></div>
+            <div className="admin-stat-card__icon"><s.icon size={24} /></div>
             <div className={`admin-stat-card__value ${s.cls}`}>{s.value}</div>
             <div className="admin-stat-card__label">{s.label}</div>
           </div>
         ))}
       </div>
 
-      <div style={{ marginBottom:'2rem' }}>
+      <div style={{ marginBottom:'2.5rem' }}>
         <div className="admin-section-header">
           <span className="admin-section-title">Recent Furniture</span>
           <button className="admin-section-link admin-section-link--purple" onClick={() => setPage('furniture')}>View all →</button>
@@ -340,150 +346,309 @@ export default function AdminPage() {
   )
 
   // ── Furniture ──────────────────────────────────────────────────
-  const FurnitureView = () => (
-    <div>
-      <h2 style={{ fontFamily:'Syne,sans-serif', fontWeight:900, fontSize:'1.375rem', marginBottom:'1.5rem' }}>Furniture Catalog</h2>
-      <Flash />
-      <div className="admin-page-grid">
-        <div className="admin-form-card">
-          <h3>{isEditing ? 'Edit Furniture' : '+ Add Furniture'}</h3>
+  const FurnitureView = () => {
+    const filteredFurniture = store.furniture.filter(item =>
+      item.name.toLowerCase().includes(furnitureSearch.toLowerCase()) ||
+      item.category.toLowerCase().includes(furnitureSearch.toLowerCase())
+    )
 
-          {/* Step 1 — 2D Image */}
-          <div style={{ marginBottom:14 }}>
-            <div style={{ fontSize:'0.7rem', fontWeight:700, color: preview ? '#43d9ad' : '#9b95ff', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:6, display:'flex', alignItems:'center', gap:6 }}>
-              <span style={{ width:16, height:16, borderRadius:'50%', background: preview ? '#43d9ad' : 'rgba(108,99,255,0.5)', display:'inline-flex', alignItems:'center', justifyContent:'center', fontSize:9, color:'#fff', flexShrink:0 }}>{preview ? <CheckCircle2 size={10} /> : '1'}</span>
-              2D Image ({isEditing ? 'optional' : 'required'})
+    return (
+      <div>
+        <h2 style={{ fontFamily:'Syne,sans-serif', fontWeight:900, fontSize:'1.75rem', marginBottom:'0.5rem', color:'#e8e8f0' }}>Furniture Catalog</h2>
+        <p style={{ color:'rgba(255,255,255,0.45)', fontSize:'0.9375rem', marginBottom:'2rem' }}>Manage and upload furniture items for your design catalog</p>
+        <Flash />
+        <div className="admin-page-grid">
+          <div className="admin-form-card">
+            <h3 style={{ color:'#e8e8f0', fontSize:'1.125rem' }}>{isEditing ? 'Edit Furniture Item' : '+ Add New Furniture'}</h3>
+
+            {/* Step 1 — 2D Image */}
+            <div style={{ marginBottom:20 }}>
+              <div style={{ fontSize:'0.75rem', fontWeight:700, color: preview ? '#43d9ad' : '#a78bfa', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:8, display:'flex', alignItems:'center', gap:8 }}>
+                <span style={{ width:20, height:20, borderRadius:'50%', background: preview ? 'rgba(67,217,173,0.3)' : 'rgba(108,99,255,0.3)', display:'inline-flex', alignItems:'center', justifyContent:'center', fontSize:10, color: preview ? '#43d9ad' : '#a78bfa', flexShrink:0, fontWeight: 700 }}>{preview ? <CheckCircle2 size={12} /> : '1'}</span>
+                2D Image ({isEditing ? 'optional' : 'required'})
+              </div>
+              <UploadBox
+                preview={preview}
+                onFile={(file) => {
+                  setImageFile(file)
+                  readFile(file, setPreview)
+                }}
+                onClear={() => {
+                  setPreview(null)
+                  setImageFile(null)
+                }}
+                icon={<Image size={32} />}
+                label="Upload furniture image (.png / .jpg)"
+              />
             </div>
-            <UploadBox
-              preview={preview}
-              onFile={(file) => {
-                setImageFile(file)
-                readFile(file, setPreview)
+
+            {/* Step 2 — 3D Model */}
+            <div style={{ marginBottom:20 }}>
+              <div style={{ fontSize:'0.75rem', fontWeight:700, color: model3dFile ? '#43d9ad' : '#a78bfa', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:8, display:'flex', alignItems:'center', gap:8 }}>
+                <span style={{ width:20, height:20, borderRadius:'50%', background: model3dFile ? 'rgba(67,217,173,0.3)' : 'rgba(108,99,255,0.3)', display:'inline-flex', alignItems:'center', justifyContent:'center', fontSize:10, color: model3dFile ? '#43d9ad' : '#a78bfa', flexShrink:0, fontWeight: 700 }}>{model3dFile ? <CheckCircle2 size={12} /> : '2'}</span>
+                3D Model — .glb or .gltf ({isEditing ? 'optional' : 'required'})
+              </div>
+              <label style={{ display:'flex', alignItems:'center', gap:12, padding:'14px 16px', borderRadius:10, border:`1px solid ${model3dFile ? 'rgba(67,217,173,0.4)' : 'rgba(108,99,255,0.2)'}`, background: model3dFile ? 'rgba(67,217,173,0.08)' : 'rgba(108,99,255,0.03)', cursor:'pointer', transition:'all .2s', position:'relative' }}>
+                <Box size={24} color={model3dFile ? '#43d9ad' : '#a78bfa'} />
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:'0.875rem', color: model3dFile ? '#43d9ad' : '#d4d4e4', fontWeight:600 }}>
+                    {model3dFile ? `✓ ${model3dName}` : 'Click to upload .glb or .gltf'}
+                  </div>
+                  <div style={{ fontSize:'0.75rem', color:'#8888aa', marginTop:3 }}>
+                    Max 100MB · Auto-scales to furniture size
+                  </div>
+                </div>
+                {model3dFile && (
+                  <button onClick={e => { e.preventDefault(); setModel3dFile(null); setModel3dName('') }}
+                    style={{ fontSize:'0.75rem', color:'#fca5a5', background:'none', border:'none', cursor:'pointer', flexShrink:0, fontWeight: 600 }}><X size={14} /> Remove</button>
+                )}
+                <input type="file" accept=".glb,.gltf" style={{ display:'none' }}
+                  onChange={e => {
+                    const f = e.target.files?.[0]
+                    if (!f) return
+                    if (f.size > MAX_MODEL_FILE_SIZE) {
+                      flash('3D model file must be 100MB or smaller', 'error')
+                      e.target.value = ''
+                      return
+                    }
+                    setModel3dName(f.name)
+                    setModel3dFile(f)
+                    e.target.value = ''
+                  }} />
+              </label>
+            </div>
+
+            {/* Status indicator */}
+            <div style={{ display:'flex', gap:8, marginBottom:16, padding:'10px 12px', borderRadius:8, background:'rgba(108,99,255,0.08)', border:'1px solid rgba(108,99,255,0.15)' }}>
+              <span style={{ fontSize:'0.75rem', fontWeight: 700, color: preview ? '#43d9ad' : '#6b7280', display:'inline-flex', alignItems:'center', gap:4 }}>{preview ? <CheckCircle2 size={12} /> : <Circle size={12} />} Image</span>
+              <span style={{ color:'rgba(255,255,255,0.1)' }}>·</span>
+              <span style={{ fontSize:'0.75rem', fontWeight: 700, color: model3dFile ? '#43d9ad' : '#6b7280', display:'inline-flex', alignItems:'center', gap:4 }}>{model3dFile ? <CheckCircle2 size={12} /> : <Circle size={12} />} Model</span>
+              <span style={{ color:'rgba(255,255,255,0.1)' }}>·</span>
+              <span style={{ fontSize:'0.75rem', fontWeight: 700, color: form.name ? '#43d9ad' : '#6b7280', display:'inline-flex', alignItems:'center', gap:4 }}>{form.name ? <CheckCircle2 size={12} /> : <Circle size={12} />} Name</span>
+            </div>
+
+            <Field label="Name *"     field="name"  placeholder="e.g. Modern Sofa" obj={form} setObj={setForm} />
+            <Field label="Width (cm)" field="width" placeholder="120" type="number" obj={form} setObj={setForm} />
+            <Field label="Depth (cm)" field="depth" placeholder="80"  type="number" obj={form} setObj={setForm} />
+            <div className="admin-field">
+              <label>Category</label>
+              <select value={form.category} onChange={e => setForm(p=>({...p,category:e.target.value}))}>
+                {CATS.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase()+c.slice(1)}</option>)}
+              </select>
+            </div>
+            <button className="admin-submit-purple" onClick={saveFurniture}
+              style={{ opacity: ((isEditing ? form.name : (preview && model3dFile && form.name)) ? 1 : 0.5) }}>
+              {isEditing ? '✓ Save Changes' : '+ Add Furniture'}
+            </button>
+            {isEditing && (
+              <button className="admin-submit-purple" onClick={resetFurnitureForm}
+                style={{ marginTop: 10, background: 'rgba(255,255,255,0.08)', color: '#e8e8f0' }}>
+                ← Cancel Edit
+              </button>
+            )}
+          </div>
+          <div>
+            <div style={{ display:'flex', alignItems:'center', gap:'0.75rem', marginBottom:'1.5rem' }}>
+              <div style={{ flex:1, position:'relative' }}>
+                <Search size={16} style={{ position:'absolute', left:'12px', top:'50%', transform:'translateY(-50%)', color:'rgba(255,255,255,0.4)', pointerEvents:'none' }} />
+                <input 
+                  type="text" 
+                  placeholder="Search furniture..." 
+                  value={furnitureSearch}
+                  onChange={e => setFurnitureSearch(e.target.value)}
+                  style={{
+                    width:'100%',
+                    padding:'0.75rem 0.75rem 0.75rem 2.5rem',
+                    borderRadius:'0.875rem',
+                    background:'rgba(255,255,255,0.04)',
+                    border:'1px solid rgba(108,99,255,0.2)',
+                    color:'#e8e8f0',
+                    fontSize:'0.9375rem',
+                    outline:'none',
+                    transition:'all 0.25s',
+                    fontFamily:'"DM Sans", sans-serif'
+                  }}
+                  onFocus={e => {
+                    e.target.style.borderColor = 'rgba(108,99,255,0.6)'
+                    e.target.style.background = 'rgba(108,99,255,0.05)'
+                    e.target.style.boxShadow = '0 0 0 3px rgba(108,99,255,0.1)'
+                  }}
+                  onBlur={e => {
+                    e.target.style.borderColor = 'rgba(108,99,255,0.2)'
+                    e.target.style.background = 'rgba(255,255,255,0.04)'
+                    e.target.style.boxShadow = 'none'
+                  }}
+                />
+              </div>
+              {furnitureSearch && (
+                <button 
+                  onClick={() => setFurnitureSearch('')}
+                  style={{ background:'none', border:'none', color:'#a78bfa', cursor:'pointer', fontSize:'0.875rem', fontWeight:600 }}>
+                  Clear
+                </button>
+              )}
+            </div>
+            <div className="admin-item-count">{filteredFurniture.length} furniture items{furnitureSearch ? ` (${store.furniture.length} total)` : ''}</div>
+            {filteredFurniture.length === 0
+              ? <div className="admin-empty">{furnitureSearch ? 'No furniture matches your search.' : 'No furniture added yet. Start by adding your first item.'}</div>
+              : <div className="admin-items-grid">{filteredFurniture.map(item => <ItemCard key={item.id} item={item} />)}</div>
+            }
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const DesignsView = () => {
+    let filteredProjects = store.projects.filter(project =>
+      project.name.toLowerCase().includes(designsSearch.toLowerCase()) ||
+      project.owner?.name?.toLowerCase().includes(designsSearch.toLowerCase()) ||
+      project.owner?.email?.toLowerCase().includes(designsSearch.toLowerCase())
+    )
+
+    if (designsFilter === 'published') {
+      filteredProjects = filteredProjects.filter(p => p.isPublic)
+    } else if (designsFilter === 'unpublished') {
+      filteredProjects = filteredProjects.filter(p => !p.isPublic)
+    }
+
+    return (
+      <div>
+        <h2 style={{ fontFamily:'Syne,sans-serif', fontWeight:900, fontSize:'1.75rem', marginBottom:'0.5rem', color:'#e8e8f0' }}>Design Moderation</h2>
+        <p style={{ color:'rgba(255,255,255,0.45)', fontSize:'0.9375rem', marginBottom:'2rem' }}>Review and manage shared designs in the gallery</p>
+        <Flash />
+        
+        <div style={{ display:'flex', gap:'1rem', alignItems:'center', marginBottom:'2rem', flexWrap:'wrap' }}>
+          <div style={{ flex:1, minWidth:'250px', position:'relative' }}>
+            <Search size={16} style={{ position:'absolute', left:'12px', top:'50%', transform:'translateY(-50%)', color:'rgba(255,255,255,0.4)', pointerEvents:'none' }} />
+            <input 
+              type="text" 
+              placeholder="Search by name or creator..." 
+              value={designsSearch}
+              onChange={e => setDesignsSearch(e.target.value)}
+              style={{
+                width:'100%',
+                padding:'0.75rem 0.75rem 0.75rem 2.5rem',
+                borderRadius:'0.875rem',
+                background:'rgba(255,255,255,0.04)',
+                border:'1px solid rgba(108,99,255,0.2)',
+                color:'#e8e8f0',
+                fontSize:'0.9375rem',
+                outline:'none',
+                transition:'all 0.25s',
+                fontFamily:'"DM Sans", sans-serif'
               }}
-              onClear={() => {
-                setPreview(null)
-                setImageFile(null)
+              onFocus={e => {
+                e.target.style.borderColor = 'rgba(108,99,255,0.6)'
+                e.target.style.background = 'rgba(108,99,255,0.05)'
+                e.target.style.boxShadow = '0 0 0 3px rgba(108,99,255,0.1)'
               }}
-              icon={<Image size={28} />}
-              label="Upload furniture image (.png / .jpg)"
+              onBlur={e => {
+                e.target.style.borderColor = 'rgba(108,99,255,0.2)'
+                e.target.style.background = 'rgba(255,255,255,0.04)'
+                e.target.style.boxShadow = 'none'
+              }}
             />
           </div>
 
-          {/* Step 2 — 3D Model */}
-          <div style={{ marginBottom:14 }}>
-            <div style={{ fontSize:'0.7rem', fontWeight:700, color: model3dFile ? '#43d9ad' : '#9b95ff', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:6, display:'flex', alignItems:'center', gap:6 }}>
-              <span style={{ width:16, height:16, borderRadius:'50%', background: model3dFile ? '#43d9ad' : 'rgba(108,99,255,0.5)', display:'inline-flex', alignItems:'center', justifyContent:'center', fontSize:9, color:'#fff', flexShrink:0 }}>{model3dFile ? <CheckCircle2 size={10} /> : '2'}</span>
-              3D Model — .glb or .gltf ({isEditing ? 'optional' : 'required'})
-            </div>
-            <label style={{ display:'flex', alignItems:'center', gap:10, padding:'12px', borderRadius:10, border:`1px solid ${model3dFile ? 'rgba(67,217,173,0.5)' : 'rgba(255,255,255,0.1)'}`, background: model3dFile ? 'rgba(67,217,173,0.06)' : 'rgba(255,255,255,0.03)', cursor:'pointer', transition:'all .15s' }}>
-              <Box size={22} />
-              <div style={{ flex:1 }}>
-                <div style={{ fontSize:12, color: model3dFile ? '#43d9ad' : '#777', fontWeight:600 }}>
-                  {model3dFile ? model3dName : 'Click to upload .glb or .gltf'}
-                </div>
-                <div style={{ fontSize:10, color:'#444', marginTop:2 }}>
-                  Max 100MB · auto-scales to furniture size in 3D view
-                </div>
-              </div>
-              {model3dFile && (
-                <button onClick={e => { e.preventDefault(); setModel3dFile(null); setModel3dName('') }}
-                  style={{ fontSize:10, color:'#ff6b6b', background:'none', border:'none', cursor:'pointer', flexShrink:0 }}><X size={12} /> Remove</button>
-              )}
-              <input type="file" accept=".glb,.gltf" style={{ display:'none' }}
-                onChange={e => {
-                  const f = e.target.files?.[0]
-                  if (!f) return
-                  if (f.size > MAX_MODEL_FILE_SIZE) {
-                    flash('3D model file must be 100MB or smaller', 'error')
-                    e.target.value = ''
-                    return
-                  }
-                  setModel3dName(f.name)
-                  setModel3dFile(f)
-                  e.target.value = ''
-                }} />
-            </label>
+          <div style={{ display:'flex', gap:'0.5rem' }}>
+            {[
+              { label:'All', value:'all' },
+              { label:'Published', value:'published', icon:Eye },
+              { label:'Unpublished', value:'unpublished', icon:EyeOff }
+            ].map(filter => {
+              const IconComponent = filter.icon
+              const isActive = designsFilter === filter.value
+              return (
+                <button
+                  key={filter.value}
+                  onClick={() => setDesignsFilter(filter.value)}
+                  style={{
+                    padding:'0.75rem 1rem',
+                    borderRadius:'0.75rem',
+                    border:`1.5px solid ${isActive ? 'rgba(108,99,255,0.5)' : 'rgba(255,255,255,0.2)'}`,
+                    background: isActive ? 'rgba(108,99,255,0.15)' : 'rgba(255,255,255,0.04)',
+                    color: isActive ? '#a78bfa' : 'rgba(255,255,255,0.5)',
+                    fontWeight: isActive ? 700 : 600,
+                    fontSize:'0.875rem',
+                    cursor:'pointer',
+                    transition:'all 0.25s',
+                    display:'flex',
+                    alignItems:'center',
+                    gap:'0.5rem'
+                  }}
+                  onMouseEnter={e => {
+                    if (!isActive) {
+                      e.target.style.borderColor = 'rgba(108,99,255,0.3)'
+                      e.target.style.background = 'rgba(108,99,255,0.08)'
+                    }
+                  }}
+                  onMouseLeave={e => {
+                    if (!isActive) {
+                      e.target.style.borderColor = 'rgba(255,255,255,0.2)'
+                      e.target.style.background = 'rgba(255,255,255,0.04)'
+                    }
+                  }}
+                >
+                  {IconComponent && <IconComponent size={16} />}
+                  {filter.label}
+                </button>
+              )
+            })}
           </div>
 
-          {/* Status indicator */}
-          <div style={{ display:'flex', gap:8, marginBottom:12, padding:'8px 10px', borderRadius:8, background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.06)' }}>
-            <span style={{ fontSize:10, color: preview ? '#43d9ad' : '#555', display:'inline-flex', alignItems:'center', gap:4 }}>{preview ? <CheckCircle2 size={10} /> : <Circle size={10} />} 2D Image</span>
-            <span style={{ color:'#333' }}>·</span>
-            <span style={{ fontSize:10, color: model3dFile ? '#43d9ad' : '#555', display:'inline-flex', alignItems:'center', gap:4 }}>{model3dFile ? <CheckCircle2 size={10} /> : <Circle size={10} />} 3D Model</span>
-            <span style={{ color:'#333' }}>·</span>
-            <span style={{ fontSize:10, color: form.name ? '#43d9ad' : '#555', display:'inline-flex', alignItems:'center', gap:4 }}>{form.name ? <CheckCircle2 size={10} /> : <Circle size={10} />} Name</span>
-          </div>
-
-          <Field label="Name *"     field="name"  placeholder="e.g. Modern Sofa" obj={form} setObj={setForm} />
-          <Field label="Width (cm)" field="width" placeholder="120" type="number" obj={form} setObj={setForm} />
-          <Field label="Depth (cm)" field="depth" placeholder="80"  type="number" obj={form} setObj={setForm} />
-          <div className="admin-field">
-            <label>Category</label>
-            <select value={form.category} onChange={e => setForm(p=>({...p,category:e.target.value}))}>
-              {CATS.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase()+c.slice(1)}</option>)}
-            </select>
-          </div>
-          <button className="admin-submit-purple" onClick={saveFurniture}
-            style={{ opacity: ((isEditing ? form.name : (preview && model3dFile && form.name)) ? 1 : 0.5) }}>
-            {isEditing ? 'Save Changes' : 'Add Furniture'}
-          </button>
-          {isEditing && (
-            <button className="admin-submit-purple" onClick={resetFurnitureForm}
-              style={{ marginTop: 8, background: 'rgba(255,255,255,0.08)' }}>
-              Cancel Edit
+          {(designsSearch || designsFilter !== 'all') && (
+            <button 
+              onClick={() => {
+                setDesignsSearch('')
+                setDesignsFilter('all')
+              }}
+              style={{ background:'none', border:'none', color:'#a78bfa', cursor:'pointer', fontSize:'0.875rem', fontWeight:600 }}>
+              Clear filters
             </button>
           )}
         </div>
-        <div>
-          <div className="admin-item-count">{store.furniture.length} items in catalog</div>
-          {store.furniture.length === 0
-            ? <div className="admin-empty">No furniture added yet</div>
-            : <div className="admin-items-grid">{store.furniture.map(item => <ItemCard key={item.id} item={item} />)}</div>
-          }
-        </div>
-      </div>
-    </div>
-  )
 
-  const DesignsView = () => (
-    <div>
-      <h2 style={{ fontFamily:'Syne,sans-serif', fontWeight:900, fontSize:'1.375rem', marginBottom:'1.5rem' }}>Design Moderation</h2>
-      <Flash />
-      <div className="admin-item-count">{store.projects.length} designs total</div>
-      {store.projects.length === 0 ? (
-        <div className="admin-empty">No designs found</div>
-      ) : (
-        <div className="admin-projects-list">
-          {store.projects.map((project) => (
-            <div key={project._id} className="admin-project-row">
-              <div className="admin-project-row__left">
-                <div className="admin-project-row__thumb">
-                  {project.thumbnail ? <img src={project.thumbnail} alt={project.name} /> : <Box size={16} />}
-                </div>
-                <div>
-                  <div className="admin-project-row__name">{project.name}</div>
-                  <div className="admin-project-row__meta">
-                    by {project.owner?.name || project.owner?.email || 'Unknown'} · {(project.placed || []).length} items
+        <div className="admin-item-count">{filteredProjects.length} designs{(designsSearch || designsFilter !== 'all') ? ` (${store.projects.length} total)` : ''}</div>
+        {filteredProjects.length === 0 ? (
+          <div className="admin-empty">
+            {designsSearch || designsFilter !== 'all' 
+              ? 'No designs match your search or filter.' 
+              : 'No designs found. When users share their projects, they will appear here for moderation.'}
+          </div>
+        ) : (
+          <div className="admin-projects-list">
+            {filteredProjects.map((project) => (
+              <div key={project._id} className="admin-project-row">
+                <div className="admin-project-row__left">
+                  <div className="admin-project-row__thumb">
+                    {project.thumbnail ? <img src={project.thumbnail} alt={project.name} /> : <Box size={18} />}
+                  </div>
+                  <div>
+                    <div className="admin-project-row__name">{project.name}</div>
+                    <div className="admin-project-row__meta">
+                      by {project.owner?.name || project.owner?.email || 'Unknown'} · {(project.placed || []).length} items · {project.isPublic ? <span style={{ color:'#43d9ad', fontWeight:700 }}>Published</span> : <span style={{ color:'#a78bfa', fontWeight:700 }}>Unpublished</span>}
+                    </div>
                   </div>
                 </div>
+                <div className="admin-project-row__actions">
+                  <button
+                    className={`admin-project-btn ${project.isPublic ? 'admin-project-btn--muted' : 'admin-project-btn--green'}`}
+                    onClick={() => requestToggleProjectVisibility(project)}
+                  >
+                    <Globe size={13} /> {project.isPublic ? 'Unpublish' : 'Publish'}
+                  </button>
+                  <button className="admin-project-btn admin-project-btn--danger" onClick={() => requestDeleteProject(project)}>
+                    <Trash2 size={13} /> Delete
+                  </button>
+                </div>
               </div>
-              <div className="admin-project-row__actions">
-                <button
-                  className={`admin-project-btn ${project.isPublic ? 'admin-project-btn--muted' : 'admin-project-btn--green'}`}
-                  onClick={() => requestToggleProjectVisibility(project)}
-                >
-                  <Globe size={12} /> {project.isPublic ? 'Unpublish' : 'Publish'}
-                </button>
-                <button className="admin-project-btn admin-project-btn--danger" onClick={() => requestDeleteProject(project)}>
-                  <Trash2 size={12} /> Delete
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  )
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
 
   const currentNav = NAV.find(n => n.id === page)
 
@@ -542,21 +707,21 @@ export default function AdminPage() {
         </main>
 
         {confirmModal.open && (
-          <div style={{ position: 'fixed', inset: 0, zIndex: 1201, background: 'rgba(5,5,12,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} role="dialog" aria-modal="true">
-            <div style={{ width: '100%', maxWidth: 340, borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)', background: '#181829', padding: 14 }}>
-              <div style={{ color: '#f1f1f7', fontWeight: 700, fontSize: 14 }}>{confirmModal.title}</div>
-              <div style={{ marginTop: 8, color: '#9a9ab0', fontSize: 12, lineHeight: 1.4 }}>{confirmModal.message}</div>
-              <div style={{ marginTop: 14, display: 'flex', gap: 8 }}>
-                <button onClick={closeConfirm} disabled={confirming} style={{ flex: 1, borderRadius: 8, border: '1px solid rgba(255,255,255,0.16)', background: 'transparent', color: '#888', fontWeight: 600, fontSize: 12, padding: '8px 10px', cursor: confirming ? 'default' : 'pointer' }}>Cancel</button>
+          <div style={{ position: 'fixed', inset: 0, zIndex: 1201, background: 'rgba(5,5,12,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, backdropFilter: 'blur(2px)' }} role="dialog" aria-modal="true">
+            <div style={{ width: '100%', maxWidth: 380, borderRadius: 16, border: '1px solid rgba(108,99,255,0.2)', background: 'rgba(19,19,31,0.9)', padding: 24, boxShadow: '0 20px 60px rgba(0,0,0,0.5)', animation: 'fadeInScale 0.3s ease-out' }}>
+              <div style={{ color: '#e8e8f0', fontWeight: 700, fontSize: 16, marginBottom: 8 }}>{confirmModal.title}</div>
+              <div style={{ marginBottom: 20, color: '#b0b0cc', fontSize: 13.5, lineHeight: 1.5 }}>{confirmModal.message}</div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button onClick={closeConfirm} disabled={confirming} style={{ flex: 1, borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.05)', color: '#a0a0b0', fontWeight: 700, fontSize: 13, padding: '10px 12px', cursor: confirming ? 'default' : 'pointer', transition: 'all 0.2s ease' }}>Cancel</button>
                 <button
                   onClick={executeConfirmedAction}
                   disabled={confirming}
                   style={confirmModal.tone === 'danger'
-                    ? { flex: 1, borderRadius: 8, border: '1px solid rgba(255,107,107,0.45)', background: 'rgba(255,107,107,0.16)', color: '#ff8d8d', fontWeight: 700, fontSize: 12, padding: '8px 10px', cursor: confirming ? 'default' : 'pointer', opacity: confirming ? 0.6 : 1 }
-                    : { flex: 1, borderRadius: 8, border: '1px solid rgba(108,99,255,0.45)', background: 'rgba(108,99,255,0.2)', color: '#c8c4ff', fontWeight: 700, fontSize: 12, padding: '8px 10px', cursor: confirming ? 'default' : 'pointer', opacity: confirming ? 0.6 : 1 }
+                    ? { flex: 1, borderRadius: 8, border: '1px solid rgba(248,113,113,0.5)', background: 'linear-gradient(135deg, rgba(248,113,113,0.2), rgba(248,113,113,0.1))', color: '#fca5a5', fontWeight: 700, fontSize: 13, padding: '10px 12px', cursor: confirming ? 'default' : 'pointer', opacity: confirming ? 0.6 : 1, transition: 'all 0.2s ease' }
+                    : { flex: 1, borderRadius: 8, border: '1px solid rgba(108,99,255,0.4)', background: 'linear-gradient(135deg, rgba(108,99,255,0.2), rgba(108,99,255,0.1))', color: '#c4b5fd', fontWeight: 700, fontSize: 13, padding: '10px 12px', cursor: confirming ? 'default' : 'pointer', opacity: confirming ? 0.6 : 1, transition: 'all 0.2s ease' }
                   }
                 >
-                  {confirming ? 'Processing...' : confirmModal.confirmText}
+                  {confirming ? '...' : confirmModal.confirmText}
                 </button>
               </div>
             </div>

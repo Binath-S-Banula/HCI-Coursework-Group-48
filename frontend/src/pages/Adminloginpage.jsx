@@ -5,7 +5,7 @@ import { z } from "zod";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { login, logout } from "../store/slices/authSlice";
-import { Settings, ShieldAlert, Lock, ArrowRight } from "lucide-react";
+import { Lock, ArrowRight, LogIn } from "lucide-react";
 import logoImage from "../uploads/homeland-logo.png";
 import "../styles/pages/AdminLoginPage.css";
 
@@ -37,6 +37,7 @@ export default function AdminLoginPage() {
     handleSubmit,
     formState: { errors },
   } = useForm({ resolver: zodResolver(schema) });
+  
   const onSubmit = (data) => {
     setNotAdmin(false);
     dispatch(login(data));
@@ -48,21 +49,31 @@ export default function AdminLoginPage() {
         <div className="admin-login-logo-wrap">
           <img src={logoImage} alt="HomePlan3D Logo" className="admin-login-logo" />
           <h1>Admin Portal</h1>
-          <p>HomePlan3D — Restricted Access</p>
+          <p>Management Dashboard</p>
         </div>
+        
         <div className="admin-login-card">
           {notAdmin && (
             <div className="admin-login-error">
-              <ShieldAlert size={14} /> This account does not have admin access.
+              <Lock size={16} /> 
+              <span>This account does not have admin access.</span>
             </div>
           )}
+          
           {error && !notAdmin && (
-            <div className="admin-login-error">{error}</div>
+            <div className="admin-login-error">
+              <Lock size={16} /> 
+              <span>{error}</span>
+            </div>
           )}
+          
           <div className="admin-login-warning">
-            <Lock size={14} /> Admin accounts only. Clients use the{" "}
-            <span onClick={() => navigate("/login")}>regular login</span>.
+            <Lock size={16} /> 
+            <span>
+              Admin accounts only. Regular users should use the <span onClick={() => navigate("/login")}>client login</span>.
+            </span>
           </div>
+          
           <form className="admin-login-form" onSubmit={handleSubmit(onSubmit)}>
             <div>
               <label>Admin Email</label>
@@ -78,6 +89,7 @@ export default function AdminLoginPage() {
                 </div>
               )}
             </div>
+            
             <div>
               <label>Password</label>
               <input
@@ -92,19 +104,27 @@ export default function AdminLoginPage() {
                 </div>
               )}
             </div>
+            
             <button
               type="submit"
               className="admin-login-submit"
               disabled={loading}
             >
-              {loading ? "Signing in..." : <><Settings size={14} /> Sign In as Admin</>}
+              {loading ? (
+                <>Loading...</>
+              ) : (
+                <>
+                  <LogIn size={16} />
+                  Sign In as Admin
+                </>
+              )}
             </button>
           </form>
+          
+          <div className="admin-login-footer">
+            <span onClick={() => navigate("/login")}>← Back to client login</span>
+          </div>
         </div>
-        <p className="admin-login-footer">
-          Not an admin?{" "}
-          <span onClick={() => navigate("/login")}>Go to client login <ArrowRight size={14} /></span>
-        </p>
       </div>
     </div>
   );
