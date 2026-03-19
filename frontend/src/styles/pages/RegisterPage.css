@@ -1,0 +1,45 @@
+/* RegisterPage.css */
+/* Reuses auth-page, auth-box, auth-card, auth-field etc from LoginPage.css */
+
+.register-logo {
+  width: 3.5rem; height: 3.5rem;
+  border-radius: 1rem; margin: 0 auto 1.25rem;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-weight: 900; font-size: 1.5rem;
+  background: linear-gradient(135deg, #43d9ad, #6c63ff);
+}
+
+.register-benefits {
+  display: flex; flex-wrap: wrap; gap: 0.5rem;
+  justify-content: center; margin-top: 1rem;
+}
+.register-benefit {
+  font-size: 0.75rem; color: #6b7280;
+  display: flex; align-items: center; gap: 0.25rem;
+}
+.register-benefit-dot { color: #43d9ad; }
+
+.register-name-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+@media(max-width: 480px) { .register-name-row { grid-template-columns: 1fr; } }
+
+.auth-submit-green {
+  width: 100%; padding: 0.875rem;
+  border-radius: 0.75rem; font-size: 1rem;
+  font-weight: 600; color: #fff; border: none; cursor: pointer;
+  background: linear-gradient(135deg, #43d9ad, #2eb890);
+  transition: opacity 0.2s, transform 0.2s;
+}
+.auth-submit-green:hover:not(:disabled) { transform: translateY(-1px); }
+.auth-submit-green:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.password-strength { margin-top: 0.5rem; }
+.password-strength__bar {
+  height: 3px; border-radius: 2px;
+  background: rgba(255,255,255,0.1);
+  overflow: hidden; margin-bottom: 0.25rem;
+}
+.password-strength__fill {
+  height: 100%; border-radius: 2px;
+  transition: width 0.3s, background 0.3s;
+}
+.password-strength__label { font-size: 0.7rem; color: #6b7280; }
