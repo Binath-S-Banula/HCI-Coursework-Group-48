@@ -1,7 +1,10 @@
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 import { PencilRuler, Box, Armchair, Camera, Users, Share2 } from 'lucide-react'
 import '../styles/pages/HomePage.css'
+
+const HeroRoomPreview = lazy(() => import('../components/home/HeroRoomPreview'))
 
 const features = [
   { Icon:PencilRuler, title:'2D Floor Plan Editor',   desc:'Draw walls, add doors & windows with pixel-perfect snap-to-grid precision.' },
@@ -30,7 +33,21 @@ const avatarColors = ['#6c63ff','#43d9ad','#ff6b6b','#ffaa44','#60a5fa']
 export default function HomePage() {
   const navigate = useNavigate()
   const { isAuthenticated } = useSelector((s) => s.auth)
+  const [shouldRender3D, setShouldRender3D] = useState(false)
   const go = () => navigate(isAuthenticated ? '/editor' : '/register')
+
+  useEffect(() => {
+    let idleId = null
+    let timeoutId = null
+
+    if ('requestIdleCallback' in window) {
+      idleId = window.requestIdleCallback(() => setShouldRender3D(true), { timeout: 1300 })
+      return () => window.cancelIdleCallback(idleId)
+    }
+
+    timeoutId = window.setTimeout(() => setShouldRender3D(true), 700)
+    return () => window.clearTimeout(timeoutId)
+  }, [])
 
   return (
     <div className="hp">
@@ -77,6 +94,14 @@ export default function HomePage() {
               Loved by <strong>4M+ designers</strong> worldwide
             </span>
           </div>
+
+          {shouldRender3D ? (
+            <Suspense fallback={<div className="hp-room hp-room--fallback" />}>
+              <HeroRoomPreview />
+            </Suspense>
+          ) : (
+            <div className="hp-room hp-room--fallback" />
+          )}
         </div>
       </section>
 

@@ -104,6 +104,80 @@
 }
 .hp-hero__proof-text strong { color:rgba(232,232,240,0.7); }
 
+.hp-room {
+  margin:36px auto 0;
+  width:min(900px, 100%);
+  max-width:100%;
+  height:clamp(260px, 40vh, 430px);
+  border-radius:20px;
+  border:1px solid rgba(108,99,255,0.24);
+  background:rgba(255,255,255,0.02);
+  box-shadow:0 25px 80px rgba(0,0,0,0.45), 0 10px 40px rgba(108,99,255,0.22);
+  overflow:hidden;
+  position:relative;
+  box-sizing:border-box;
+  touch-action:none;
+  contain:layout paint;
+}
+
+.hp-room canvas {
+  width:100% !important;
+  height:100% !important;
+  display:block;
+  max-width:100%;
+  touch-action:none;
+}
+
+.hp-room__dragIcon {
+  position:absolute;
+  right:12px;
+  bottom:12px;
+  width:30px;
+  height:30px;
+  border-radius:10px;
+  background:rgba(17,17,28,0.72);
+  border:1px solid rgba(255,255,255,0.22);
+  color:rgba(232,232,240,0.88);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  pointer-events:none;
+  backdrop-filter:blur(4px);
+}
+
+.hp-room--fallback {
+  background:
+    radial-gradient(circle at 20% 25%, rgba(108,99,255,0.26), transparent 45%),
+    radial-gradient(circle at 78% 70%, rgba(67,217,173,0.2), transparent 42%),
+    linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+}
+
+.hp-room--fallback::before {
+  content:'';
+  position:absolute;
+  inset:0;
+  background-image:
+    linear-gradient(rgba(108,99,255,0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(108,99,255,0.07) 1px, transparent 1px);
+  background-size:40px 40px;
+  opacity:0.5;
+}
+
+@media (max-width: 768px) {
+  .hp-room {
+    margin-top:28px;
+    border-radius:16px;
+    height:clamp(230px, 34vh, 320px);
+  }
+
+  .hp-room__dragIcon {
+    width:28px;
+    height:28px;
+    right:10px;
+    bottom:10px;
+  }
+}
+
 /* ── STATS ── */
 .hp-stats {
   padding:40px 24px;
